@@ -54,7 +54,11 @@ function logout() {
       <Notify v-if="showNotify" class="right-menu-item" />
       <el-dropdown>
         <div class="right-menu-item user">
-          <el-avatar :icon="UserFilled" :size="30" />
+          <el-avatar 
+            :src="userStore.avatar" 
+            :icon="UserFilled" 
+            :size="30" 
+          />
           <span>{{ userStore.username }}</span>
         </div>
         <template #dropdown>

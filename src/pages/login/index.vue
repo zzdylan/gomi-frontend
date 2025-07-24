@@ -26,11 +26,15 @@ const loading = ref(false)
 /** 验证码图片 URL */
 const codeUrl = ref("")
 
+/** 验证码ID */
+const captchaId = ref("")
+
 /** 登录表单数据 */
 const loginFormData: LoginRequestData = reactive({
-  username: "admin",
-  password: "12345678",
-  code: ""
+  username: "",
+  password: "",
+  captcha: "",
+  captcha_id: ""
 })
 
 /** 登录表单校验规则 */
@@ -40,9 +44,9 @@ const loginFormRules: FormRules = {
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" }
+    { min: 6, max: 30, message: "长度在 6 到 30 个字符", trigger: "blur" }
   ],
-  code: [
+  captcha: [
     { required: true, message: "请输入验证码", trigger: "blur" }
   ]
 }
@@ -55,12 +59,15 @@ function handleLogin() {
       return
     }
     loading.value = true
+    // 设置验证码ID
+    loginFormData.captcha_id = captchaId.value
+    
     loginApi(loginFormData).then(({ data }) => {
       userStore.setToken(data.token)
       router.push("/")
     }).catch(() => {
       createCode()
-      loginFormData.password = ""
+      loginFormData.captcha = ""
     }).finally(() => {
       loading.value = false
     })
@@ -70,12 +77,14 @@ function handleLogin() {
 /** 创建验证码 */
 function createCode() {
   // 清空已输入的验证码
-  loginFormData.code = ""
+  loginFormData.captcha = ""
   // 清空验证图片
   codeUrl.value = ""
   // 获取验证码图片
   getCaptchaApi().then((res) => {
-    codeUrl.value = res.data
+    captchaId.value = res.data.captcha_id
+    codeUrl.value = res.data.captcha_image
+    loginFormData.captcha_id = res.data.captcha_id
   })
 }
 
@@ -116,9 +125,9 @@ createCode()
               @focus="handleFocus"
             />
           </el-form-item>
-          <el-form-item prop="code">
+          <el-form-item prop="captcha">
             <el-input
-              v-model.trim="loginFormData.code"
+              v-model.trim="loginFormData.captcha"
               placeholder="验证码"
               type="text"
               tabindex="3"
