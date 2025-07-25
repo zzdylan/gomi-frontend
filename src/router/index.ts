@@ -81,6 +81,15 @@ export const constantRoutes: RouteRecordRaw[] = [
           title: "Demo列表",
           keepAlive: true
         }
+      },
+      {
+        path: "demo-drawer",
+        component: () => import("@/pages/demo/demo-drawer/index.vue"),
+        name: "DemoDrawer",
+        meta: {
+          title: "Demo抽屉",
+          keepAlive: true
+        }
       }
     ]
   }
