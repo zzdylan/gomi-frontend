@@ -62,6 +62,27 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/demo",
+    component: Layouts,
+    redirect: "/demo/demo-list",
+    name: "Demo",
+    meta: {
+      title: "Demo管理",
+      elIcon: "DataBoard"
+    },
+    children: [
+      {
+        path: "demo-list",
+        component: () => import("@/pages/demo/demo-list/index.vue"),
+        name: "DemoList",
+        meta: {
+          title: "Demo列表",
+          keepAlive: true
+        }
+      }
+    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {
