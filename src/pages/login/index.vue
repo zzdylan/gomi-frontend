@@ -29,6 +29,9 @@ const codeUrl = ref("")
 /** 验证码ID */
 const captchaId = ref("")
 
+/** 是否启用验证码 */
+const captchaEnabled = ref(true)
+
 /** 登录表单数据 */
 const loginFormData: LoginRequestData = reactive({
   username: "",
@@ -47,7 +50,22 @@ const loginFormRules: FormRules = {
     { min: 6, max: 30, message: "长度在 6 到 30 个字符", trigger: "blur" }
   ],
   captcha: [
-    { required: true, message: "请输入验证码", trigger: "blur" }
+    { 
+      required: true, 
+      message: "请输入验证码", 
+      trigger: "blur",
+      validator: (rule, value, callback) => {
+        if (!captchaEnabled.value) {
+          callback()
+          return
+        }
+        if (!value) {
+          callback(new Error("请输入验证码"))
+          return
+        }
+        callback()
+      }
+    }
   ]
 }
 
@@ -59,15 +77,19 @@ function handleLogin() {
       return
     }
     loading.value = true
-    // 设置验证码ID
-    loginFormData.captcha_id = captchaId.value
+    // 如果启用验证码，设置验证码ID
+    if (captchaEnabled.value) {
+      loginFormData.captcha_id = captchaId.value
+    }
     
     loginApi(loginFormData).then(({ data }) => {
       userStore.setToken(data.token)
       router.push("/")
     }).catch(() => {
-      createCode()
-      loginFormData.captcha = ""
+      if (captchaEnabled.value) {
+        createCode()
+        loginFormData.captcha = ""
+      }
     }).finally(() => {
       loading.value = false
     })
@@ -82,9 +104,12 @@ function createCode() {
   codeUrl.value = ""
   // 获取验证码图片
   getCaptchaApi().then((res) => {
-    captchaId.value = res.data.captcha_id
-    codeUrl.value = res.data.captcha_image
-    loginFormData.captcha_id = res.data.captcha_id
+    captchaEnabled.value = res.data.captcha_enable
+    if (captchaEnabled.value) {
+      captchaId.value = res.data.captcha_id
+      codeUrl.value = res.data.captcha_image
+      loginFormData.captcha_id = res.data.captcha_id
+    }
   })
 }
 
@@ -125,7 +150,7 @@ createCode()
               @focus="handleFocus"
             />
           </el-form-item>
-          <el-form-item prop="captcha">
+          <el-form-item v-if="captchaEnabled" prop="captcha">
             <el-input
               v-model.trim="loginFormData.captcha"
               placeholder="验证码"

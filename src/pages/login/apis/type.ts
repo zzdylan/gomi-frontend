@@ -12,6 +12,7 @@ export interface LoginRequestData {
 export type CaptchaResponseData = ApiResponseData<{
   captcha_id: string
   captcha_image: string
+  captcha_enable: boolean
 }>
 
 export type LoginResponseData = ApiResponseData<{ token: string }>
