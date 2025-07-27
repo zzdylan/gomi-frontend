@@ -92,6 +92,27 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/user",
+    component: Layouts,
+    name: "User",
+    meta: {
+      title: "用户管理",
+      elIcon: "User"
+      // roles: ["super_admin"]
+    },
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/user/index.vue"),
+        name: "UserList",
+        meta: {
+          title: "用户管理",
+          keepAlive: true
+        }
+      }
+    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {
