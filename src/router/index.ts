@@ -92,48 +92,6 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
-  },
-  {
-    path: "/user",
-    component: Layouts,
-    name: "User",
-    meta: {
-      title: "用户管理",
-      elIcon: "User"
-      // roles: ["super_admin"]
-    },
-    children: [
-      {
-        path: "list",
-        component: () => import("@/pages/user/index.vue"),
-        name: "UserList",
-        meta: {
-          title: "用户管理",
-          keepAlive: true
-        }
-      }
-    ]
-  },
-  {
-    path: "/role",
-    component: Layouts,
-    name: "Role",
-    meta: {
-      title: "角色管理",
-      elIcon: "UserFilled"
-      // roles: ["super_admin"]
-    },
-    children: [
-      {
-        path: "list",
-        component: () => import("@/pages/role/index.vue"),
-        name: "RoleList",
-        meta: {
-          title: "角色管理",
-          keepAlive: true
-        }
-      }
-    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {
@@ -262,6 +220,40 @@ export const constantRoutes: RouteRecordRaw[] = [
  * @description 必须带有唯一的 Name 属性
  */
 export const dynamicRoutes: RouteRecordRaw[] = [
+  {
+    path: "/admin",
+    component: Layouts,
+    redirect: "/admin/user",
+    name: "Admin",
+    meta: {
+      title: "后台管理",
+      elIcon: "Setting",
+      roles: ["super_admin"],
+      alwaysShow: true
+    },
+    children: [
+      {
+        path: "user",
+        component: () => import("@/pages/user/index.vue"),
+        name: "UserManagement",
+        meta: {
+          title: "用户管理",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      },
+      {
+        path: "role",
+        component: () => import("@/pages/role/index.vue"),
+        name: "RoleManagement",
+        meta: {
+          title: "角色管理",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      }
+    ]
+  },
   {
     path: "/permission",
     component: Layouts,
