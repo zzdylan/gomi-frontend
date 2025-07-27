@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps, VxeModalInstance, VxeModalProps } from "vxe-table"
-import { createDemoApi, deleteDemoApi, getDemoListApi, updateDemoApi } from "../apis"
+import { batchDeleteDemoApi, createDemoApi, deleteDemoApi, getDemoListApi, updateDemoApi } from "../apis"
 
 defineOptions({
   name: "DemoList"
@@ -333,8 +333,36 @@ const crudStore = reactive({
         ElMessage.success("删除成功")
         crudStore.afterDelete()
         crudStore.commitQuery()
-      }).catch((error) => {
-        ElMessage.error(error?.message || "删除失败")
+      })
+    })
+  },
+  /** 批量删除 */
+  onBatchDelete: () => {
+    const checkedRows = xGridDom.value?.getCheckboxRecords() as RowMeta[]
+    if (!checkedRows || checkedRows.length === 0) {
+      ElMessage.warning("请选择要删除的数据")
+      return
+    }
+
+    const names = checkedRows.map(row => row.name).join("、")
+    const tip = `确定 <strong style="color: var(--el-color-danger);"> 批量删除 </strong> 以下 Demo：<strong style="color: var(--el-color-primary);"> ${names} </strong> ？`
+    const config: ElMessageBoxOptions = {
+      type: "warning",
+      showClose: true,
+      closeOnClickModal: true,
+      closeOnPressEscape: true,
+      cancelButtonText: "取消",
+      confirmButtonText: "确定",
+      dangerouslyUseHTMLString: true
+    }
+    ElMessageBox.confirm(tip, "提示", config).then(() => {
+      const ids = checkedRows.map(row => row.id)
+      batchDeleteDemoApi({ ids }).then(() => {
+        ElMessage.success(`成功删除 ${checkedRows.length} 条数据`)
+        crudStore.afterDelete()
+        crudStore.commitQuery()
+        // 清空选择
+        xGridDom.value?.clearCheckboxRow()
       })
     })
   },
@@ -365,7 +393,7 @@ const crudStore = reactive({
         <vxe-button status="primary" icon="vxe-icon-add" @click="crudStore.onShowModal()">
           新增Demo
         </vxe-button>
-        <vxe-button status="danger" icon="vxe-icon-delete">
+        <vxe-button status="danger" icon="vxe-icon-delete" @click="crudStore.onBatchDelete()">
           批量删除
         </vxe-button>
       </template>

@@ -59,3 +59,12 @@ export type UpdateUserResponseData = ApiResponseData<null>
 export type DeleteUserResponseData = ApiResponseData<null>
 
 export type CurrentUserResponseData = ApiResponseData<UserInfo>
+
+/** 批量删除用户请求数据 */
+export interface BatchDeleteUserRequestData {
+  /** ID列表 */
+  ids: string[]
+}
+
+/** 批量删除用户响应数据 */
+export type BatchDeleteUserResponseData = ApiResponseData<null>

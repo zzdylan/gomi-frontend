@@ -57,3 +57,12 @@ export function deleteUserApi(id: string) {
     method: "delete"
   })
 }
+
+/** 批量删除用户 */
+export function batchDeleteUserApi(data: Users.BatchDeleteUserRequestData) {
+  return request<Users.BatchDeleteUserResponseData>({
+    url: "users/batch-delete",
+    method: "post",
+    data
+  })
+}

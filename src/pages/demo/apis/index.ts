@@ -48,3 +48,12 @@ export function deleteDemoApi(id: number | string) {
     method: "delete"
   })
 }
+
+/** 批量删除 Demo */
+export function batchDeleteDemoApi(data: Demo.BatchDeleteDemoRequestData) {
+  return request<Demo.BatchDeleteDemoResponseData>({
+    url: "demos/batch-delete",
+    method: "post",
+    data
+  })
+}

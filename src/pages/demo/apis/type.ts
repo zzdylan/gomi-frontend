@@ -57,3 +57,12 @@ export type UpdateDemoResponseData = ApiResponseData<DemoItem>
 
 /** 删除 Demo 响应数据 */
 export type DeleteDemoResponseData = ApiResponseData<null>
+
+/** 批量删除 Demo 请求数据 */
+export interface BatchDeleteDemoRequestData {
+  /** ID列表 */
+  ids: number[]
+}
+
+/** 批量删除 Demo 响应数据 */
+export type BatchDeleteDemoResponseData = ApiResponseData<null>

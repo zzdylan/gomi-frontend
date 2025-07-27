@@ -2,7 +2,7 @@
 import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps } from "vxe-table"
 // import type { UserInfo } from "@@/apis/users/type"
-import { createUserApi, deleteUserApi, getUserListApi, updateUserApi } from "@@/apis/users"
+import { batchDeleteUserApi, createUserApi, deleteUserApi, getUserListApi, updateUserApi } from "@@/apis/users"
 
 defineOptions({
   name: "UserManagement"
@@ -447,7 +447,7 @@ const crudStore = reactive({
   },
   /** 删除 */
   onDelete: (row: RowMeta) => {
-    const tip = `确定 <strong style="color: var(--el-color-danger);"> 删除 </strong> 用户 <strong style="color: var(--el-color-primary);"> ${row.name} </strong> ？`
+    const tip = `确定 <strong style="color: var(--el-color-danger);"> 删除 </strong> 用户 <strong style="color: var(--el-color-primary);"> ${row.username} </strong> ？`
     const config: ElMessageBoxOptions = {
       type: "warning",
       showClose: true,
@@ -462,8 +462,36 @@ const crudStore = reactive({
         ElMessage.success("删除成功")
         crudStore.afterDelete()
         crudStore.commitQuery()
-      }).catch((error) => {
-        ElMessage.error(error?.message || "删除失败")
+      })
+    })
+  },
+  /** 批量删除 */
+  onBatchDelete: () => {
+    const checkedRows = xGridDom.value?.getCheckboxRecords() as RowMeta[]
+    if (!checkedRows || checkedRows.length === 0) {
+      ElMessage.warning("请选择要删除的用户")
+      return
+    }
+
+    const names = checkedRows.map(row => row.username).join("、")
+    const tip = `确定 <strong style="color: var(--el-color-danger);"> 批量删除 </strong> 以下用户：<strong style="color: var(--el-color-primary);"> ${names} </strong> ？`
+    const config: ElMessageBoxOptions = {
+      type: "warning",
+      showClose: true,
+      closeOnClickModal: true,
+      closeOnPressEscape: true,
+      cancelButtonText: "取消",
+      confirmButtonText: "确定",
+      dangerouslyUseHTMLString: true
+    }
+    ElMessageBox.confirm(tip, "提示", config).then(() => {
+      const ids = checkedRows.map(row => row.id)
+      batchDeleteUserApi({ ids }).then(() => {
+        ElMessage.success(`成功删除 ${checkedRows.length} 个用户`)
+        crudStore.afterDelete()
+        crudStore.commitQuery()
+        // 清空选择
+        xGridDom.value?.clearCheckboxRow()
       })
     })
   },
@@ -504,7 +532,7 @@ function getRoleLabel(role: string) {
         <vxe-button status="primary" icon="vxe-icon-add" @click="crudStore.onShowDrawer()">
           新增用户
         </vxe-button>
-        <vxe-button status="danger" icon="vxe-icon-delete">
+        <vxe-button status="danger" icon="vxe-icon-delete" @click="crudStore.onBatchDelete()">
           批量删除
         </vxe-button>
       </template>
