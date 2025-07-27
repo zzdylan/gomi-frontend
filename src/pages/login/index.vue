@@ -50,9 +50,9 @@ const loginFormRules: FormRules = {
     { min: 6, max: 30, message: "长度在 6 到 30 个字符", trigger: "blur" }
   ],
   captcha: [
-    { 
-      required: true, 
-      message: "请输入验证码", 
+    {
+      required: true,
+      message: "请输入验证码",
       trigger: "blur",
       validator: (rule, value, callback) => {
         if (!captchaEnabled.value) {
@@ -81,7 +81,7 @@ function handleLogin() {
     if (captchaEnabled.value) {
       loginFormData.captcha_id = captchaId.value
     }
-    
+
     loginApi(loginFormData).then(({ data }) => {
       userStore.setToken(data.token)
       router.push("/")

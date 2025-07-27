@@ -12,7 +12,7 @@ export const useUserStore = defineStore("user", () => {
   const roles = ref<string[]>([])
 
   const username = ref<string>("")
-  
+
   const avatar = ref<string>("")
 
   const tagsViewStore = useTagsViewStore()

@@ -113,6 +113,27 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/role",
+    component: Layouts,
+    name: "Role",
+    meta: {
+      title: "角色管理",
+      elIcon: "UserFilled"
+      // roles: ["super_admin"]
+    },
+    children: [
+      {
+        path: "list",
+        component: () => import("@/pages/role/index.vue"),
+        name: "RoleList",
+        meta: {
+          title: "角色管理",
+          keepAlive: true
+        }
+      }
+    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {

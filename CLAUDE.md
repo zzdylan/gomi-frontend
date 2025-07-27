@@ -9,16 +9,19 @@ V3 Admin Vite 是一个基于现代前端技术构建的 Vue3 后台管理模板
 ## 开发命令
 
 ### 包管理器
+
 - 使用 `pnpm` 进行所有包管理操作
 - 安装依赖：`pnpm i`
 
 ### 开发与构建
+
 - 启动开发服务器：`pnpm dev`（运行在端口 3333）
 - 构建预发布环境：`pnpm build:staging`
 - 构建生产环境：`pnpm build`
 - 本地预览构建：`pnpm preview`
 
 ### 代码质量与测试
+
 - 代码检查和格式化：`pnpm lint`
 - 运行单元测试：`pnpm test`
 - TypeScript 类型检查：`vue-tsc`（包含在构建命令中）
@@ -39,6 +42,7 @@ V3 Admin Vite 是一个基于现代前端技术构建的 Vue3 后台管理模板
 ## 项目架构
 
 ### 目录结构
+
 - `src/common/` (`@@/`) - 通用工具、组件和资源
   - `apis/` - 通用接口定义
   - `assets/` - 静态资源（图标、图片、样式）
@@ -54,6 +58,7 @@ V3 Admin Vite 是一个基于现代前端技术构建的 Vue3 后台管理模板
 - `src/http/` - HTTP 客户端配置
 
 ### 路径别名
+
 - `@/` 指向 `src/`
 - `@@/` 指向 `src/common/`
 
@@ -66,18 +71,21 @@ V3 Admin Vite 是一个基于现代前端技术构建的 Vue3 后台管理模板
 **主题系统**：多主题支持（普通、暗色、深蓝），使用 CSS 变量进行自定义。
 
 **状态管理**：使用 Pinia 的 setup store 语法。主要存储：
+
 - `user.ts` - 用户认证和数据
 - `settings.ts` - 应用设置
 - `permission.ts` - 路由权限
 - `tags-view.ts` - 标签页导航
 
 **HTTP 层**：集中式 axios 配置，包含：
+
 - 请求/响应拦截器
 - 基于 Token 的身份认证
 - 用户友好的错误处理
 - 开发环境 Mock API 集成
 
 **组件组织**：
+
 - 全局组件在 `src/common/components/`
 - 功能特定组件在各自页面目录内
 - Vue API 和 Element Plus 组件自动导入
@@ -85,17 +93,20 @@ V3 Admin Vite 是一个基于现代前端技术构建的 Vue3 后台管理模板
 ### 开发模式
 
 **Vue 开发**：
+
 - 使用组合式 API 和 `<script setup lang="ts">`
 - 组件命名：组件使用 PascalCase，页面使用 kebab-case
 - Props：定义时使用 camelCase，模板中使用 kebab-case
 - 优先使用 `ref` 而非 `reactive` 进行状态管理
 
 **TypeScript**：
+
 - 启用严格模式
 - 类型定义在 `types/` 目录
 - 组件和导入的自动生成类型
 
 **样式**：
+
 - 优先使用作用域 CSS：`<style scoped lang="scss">`
 - 使用 CSS 变量进行主题化
 - UnoCSS 快捷方式：`wh-full`、`flex-center` 等
