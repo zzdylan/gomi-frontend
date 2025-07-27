@@ -334,6 +334,7 @@ const permissionsList = ref<Array<{ resource: string, action: string }>>([])
 
 // 预定义的HTTP动作选项
 const actionOptions = [
+  { label: "所有方法 (*)", value: "*" },
   { label: "查看 (GET)", value: "GET" },
   { label: "创建 (POST)", value: "POST" },
   { label: "更新 (PUT)", value: "PUT" },
