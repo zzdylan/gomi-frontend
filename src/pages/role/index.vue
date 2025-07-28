@@ -394,7 +394,11 @@ const crudStore = reactive({
     }
     drawerVisible.value = true
     nextTick(() => {
-      !crudStore.isUpdate && xFormDom.value?.reset()
+      if (!crudStore.isUpdate) {
+        xFormDom.value?.reset()
+        // 确保新增时状态默认为启用
+        xFormOpt.data.status = 1
+      }
       xFormDom.value?.clearValidate()
     })
   },
@@ -416,9 +420,8 @@ const crudStore = reactive({
         !crudStore.isUpdate && crudStore.afterInsert()
         crudStore.commitQuery()
       }
-      const errorCallback = (error: any) => {
+      const errorCallback = (_error: any) => {
         xFormOpt.loading = false
-        ElMessage.error(error?.message || "操作失败")
       }
 
       if (crudStore.isUpdate && crudStore.currentRow) {
