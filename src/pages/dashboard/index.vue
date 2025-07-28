@@ -5,7 +5,7 @@ import Editor from "./components/Editor.vue"
 
 const userStore = useUserStore()
 
-const isAdmin = userStore.roles.includes("admin")
+const isAdmin = userStore.roles.includes("super_admin")
 </script>
 
 <template>

@@ -257,9 +257,8 @@ const crudStore = reactive({
         !crudStore.isUpdate && crudStore.afterInsert()
         crudStore.commitQuery()
       }
-      const errorCallback = (error: any) => {
+      const errorCallback = (_error: any) => {
         xFormOpt.loading = false
-        ElMessage.error(error?.message || "操作失败")
       }
 
       if (crudStore.isUpdate && crudStore.currentRow) {
