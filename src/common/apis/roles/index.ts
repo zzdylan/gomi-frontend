@@ -7,7 +7,6 @@ export function getRoleListApi(params?: {
   per_page?: number
   name?: string
   slug?: string
-  status?: number
 }) {
   return request<Roles.GetRoleListResponseData>({
     url: "roles",
