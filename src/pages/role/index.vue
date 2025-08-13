@@ -13,7 +13,6 @@ interface RowMeta {
   name: string
   slug: string
   description?: string
-  status: number
   permissions?: Array<{ resource: string, action: string }>
   created_at: string
   updated_at: string
@@ -50,20 +49,6 @@ const xGridOpt: VxeGridProps = reactive({
           props: {
             placeholder: "角色标识",
             clearable: true
-          }
-        }
-      },
-      {
-        field: "status",
-        itemRender: {
-          name: "VxeSelect",
-          props: {
-            placeholder: "状态",
-            clearable: true,
-            options: [
-              { label: "启用", value: 1 },
-              { label: "禁用", value: 0 }
-            ]
           }
         }
       },
@@ -120,15 +105,6 @@ const xGridOpt: VxeGridProps = reactive({
       field: "description",
       title: "描述",
       minWidth: "200px"
-    },
-    {
-      field: "status",
-      title: "状态",
-      width: "100px",
-      align: "center",
-      slots: {
-        default: "status-slot"
-      }
     },
     {
       field: "permissions",
@@ -194,8 +170,7 @@ const xGridOpt: VxeGridProps = reactive({
             page: page.currentPage,
             per_page: page.pageSize,
             ...(form.name && { name: form.name }),
-            ...(form.slug && { slug: form.slug }),
-            ...(form.status !== undefined && form.status !== "" && { status: form.status })
+            ...(form.slug && { slug: form.slug })
           }
           // 调用接口
           getRoleListApi(params).then(callback).catch(callback)
@@ -225,7 +200,6 @@ const xFormOpt: VxeFormProps = reactive({
     name: "",
     slug: "",
     description: "",
-    status: 1,
     permissions: []
   },
   /** 项列表 */
@@ -258,20 +232,6 @@ const xFormOpt: VxeFormProps = reactive({
         props: {
           placeholder: "请输入角色描述",
           rows: 3
-        }
-      }
-    },
-    {
-      field: "status",
-      title: "状态",
-      itemRender: {
-        name: "VxeSelect",
-        props: {
-          placeholder: "请选择状态",
-          options: [
-            { label: "启用", value: 1 },
-            { label: "禁用", value: 0 }
-          ]
         }
       }
     }
@@ -385,7 +345,6 @@ const crudStore = reactive({
       xFormOpt.data.name = row.name
       xFormOpt.data.slug = row.slug
       xFormOpt.data.description = row.description || ""
-      xFormOpt.data.status = row.status
       xFormOpt.data.permissions = row.permissions || []
     } else {
       crudStore.isUpdate = false
@@ -396,8 +355,6 @@ const crudStore = reactive({
     nextTick(() => {
       if (!crudStore.isUpdate) {
         xFormDom.value?.reset()
-        // 确保新增时状态默认为启用
-        xFormOpt.data.status = 1
       }
       xFormDom.value?.clearValidate()
     })
@@ -430,7 +387,6 @@ const crudStore = reactive({
           name: xFormOpt.data.name.trim(),
           slug: xFormOpt.data.slug.trim(),
           description: xFormOpt.data.description?.trim() || undefined,
-          status: xFormOpt.data.status,
           permissions: xFormOpt.data.permissions
         }
         updateRoleApi(crudStore.currentRow.id, updateData).then(callback).catch(errorCallback)
@@ -440,7 +396,6 @@ const crudStore = reactive({
           name: xFormOpt.data.name.trim(),
           slug: xFormOpt.data.slug.trim(),
           description: xFormOpt.data.description?.trim() || undefined,
-          status: xFormOpt.data.status,
           permissions: xFormOpt.data.permissions
         }
         createRoleApi(createData).then(callback).catch(errorCallback)
@@ -517,15 +472,6 @@ const crudStore = reactive({
   }
 })
 
-// 状态映射
-const statusMap = {
-  1: { type: "success", text: "启用" },
-  0: { type: "info", text: "禁用" }
-}
-
-function getStatusInfo(status: number) {
-  return statusMap[status as keyof typeof statusMap] || { type: "info", text: "未知" }
-}
 // #endregion
 </script>
 
@@ -541,12 +487,6 @@ function getStatusInfo(status: number) {
         <vxe-button status="danger" icon="vxe-icon-delete" @click="crudStore.onBatchDelete()">
           批量删除
         </vxe-button>
-      </template>
-      <!-- 状态列 -->
-      <template #status-slot="{ row }">
-        <el-tag :type="getStatusInfo(row.status).type as any" size="small">
-          {{ getStatusInfo(row.status).text }}
-        </el-tag>
       </template>
       <!-- 权限数量列 -->
       <template #permissions-slot="{ row }">

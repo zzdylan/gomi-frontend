@@ -12,7 +12,6 @@ export interface RoleInfo {
   name: string
   slug: string
   description?: string
-  status: number
   permissions?: Permission[]
   created_at?: string
   updated_at?: string
@@ -23,7 +22,6 @@ export interface CreateRoleRequestData {
   name: string
   slug: string
   description?: string
-  status: number
   permissions?: Permission[]
 }
 
@@ -32,7 +30,6 @@ export interface UpdateRoleRequestData {
   name?: string
   slug?: string
   description?: string
-  status?: number
   permissions?: Permission[]
 }
 
