@@ -255,6 +255,64 @@ export const dynamicRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/agent",
+    component: Layouts,
+    redirect: "/agent/index",
+    name: "Agent",
+    meta: {
+      title: "代理商管理",
+      elIcon: "UserFilled",
+      roles: ["super_admin"]
+    },
+    children: [
+      {
+        path: "index",
+        component: () => import("@/pages/agent/index.vue"),
+        name: "AgentManagement",
+        meta: {
+          title: "代理商管理",
+          elIcon: "UserFilled",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      }
+    ]
+  },
+  {
+    path: "/package-system",
+    component: Layouts,
+    redirect: "/package-system/benefit",
+    name: "PackageSystem",
+    meta: {
+      title: "套餐管理",
+      elIcon: "Box",
+      roles: ["super_admin"],
+      alwaysShow: true
+    },
+    children: [
+      {
+        path: "benefit",
+        component: () => import("@/pages/benefit/index.vue"),
+        name: "BenefitManagement",
+        meta: {
+          title: "权益管理",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      },
+      {
+        path: "package",
+        component: () => import("@/pages/package/index.vue"),
+        name: "PackageManagement",
+        meta: {
+          title: "套餐管理",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      }
+    ]
+  },
+  {
     path: "/permission",
     component: Layouts,
     redirect: "/permission/page-level",
