@@ -22,7 +22,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
     canvas = markRaw(new Canvas(canvasEl.value, {
       width: 375,
       height: 667,
-      backgroundColor: "#ffffff",
+      backgroundColor: "#ffffff"
     }))
 
     // 监听对象选中事件
@@ -50,7 +50,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
     elements.value = objects.map((obj, index) => ({
       id: obj.get("id") || `element-${index}`,
       type: obj.type as any,
-      name: obj.get("name") || `${obj.type}-${index}`,
+      name: obj.get("name") || `${obj.type}-${index}`
     }))
   }
 
@@ -65,7 +65,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
       height: 100,
       fill: "#3b82f6",
       stroke: "#1e40af",
-      strokeWidth: 2,
+      strokeWidth: 2
     })
 
     const id = `rect-${Date.now()}`
@@ -87,7 +87,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
       radius: 50,
       fill: "#10b981",
       stroke: "#059669",
-      strokeWidth: 2,
+      strokeWidth: 2
     })
 
     const id = `circle-${Date.now()}`
@@ -109,7 +109,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
       width: 200,
       fontSize: 24,
       fill: "#1f2937",
-      fontFamily: "Arial",
+      fontFamily: "Arial"
     })
 
     const id = `text-${Date.now()}`
@@ -131,7 +131,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
       img.scale(0.5)
       img.set({
         left: 100,
-        top: 100,
+        top: 100
       })
 
       const id = `image-${Date.now()}`
@@ -156,7 +156,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
   const selectElement = (id: string) => {
     if (!canvas) return
 
-    const obj = canvas.getObjects().find((o) => o.get("id") === id)
+    const obj = canvas.getObjects().find(o => o.get("id") === id)
     if (obj) {
       canvas.setActiveObject(obj)
       canvas.renderAll()
@@ -167,11 +167,60 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
   const deleteElement = (id: string) => {
     if (!canvas) return
 
-    const obj = canvas.getObjects().find((o) => o.get("id") === id)
+    const obj = canvas.getObjects().find(o => o.get("id") === id)
     if (obj) {
       canvas.remove(obj)
       canvas.renderAll()
     }
+  }
+
+  // 上移图层
+  const moveLayerUp = (id: string) => {
+    if (!canvas) return
+
+    const objects = canvas.getObjects()
+    const index = objects.findIndex(o => o.get("id") === id)
+    if (index > -1 && index < objects.length - 1) {
+      const obj = objects[index]
+      canvas.remove(obj)
+      canvas.insertAt(index + 1, obj)
+      canvas.renderAll()
+      updateElements()
+    }
+  }
+
+  // 下移图层
+  const moveLayerDown = (id: string) => {
+    if (!canvas) return
+
+    const objects = canvas.getObjects()
+    const index = objects.findIndex(o => o.get("id") === id)
+    if (index > 0) {
+      const obj = objects[index]
+      canvas.remove(obj)
+      canvas.insertAt(index - 1, obj)
+      canvas.renderAll()
+      updateElements()
+    }
+  }
+
+  // 重新排序图层
+  const reorderLayers = (newElements: FabricElement[]) => {
+    if (!canvas) return
+
+    const objects = canvas.getObjects()
+    const orderedObjects = newElements.map((element) => {
+      return objects.find(obj => obj.get("id") === element.id)
+    }).filter(Boolean)
+
+    // 清空画布并按新顺序添加对象
+    canvas.remove(...objects)
+    orderedObjects.forEach((obj) => {
+      if (obj && canvas) canvas.add(obj)
+    })
+
+    canvas.renderAll()
+    updateElements()
   }
 
   // 清空画布
@@ -194,7 +243,7 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
     return canvas.toDataURL({
       format: "png",
       quality: 1,
-      multiplier: 1,
+      multiplier: 1
     })
   }
 
@@ -227,9 +276,12 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
     deleteSelected,
     selectElement,
     deleteElement,
+    moveLayerUp,
+    moveLayerDown,
+    reorderLayers,
     clearCanvas,
     exportJSON,
     exportImage,
-    loadFromJSON,
+    loadFromJSON
   }
 }

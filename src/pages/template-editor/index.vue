@@ -1,65 +1,3 @@
-<template>
-  <div class="template-editor">
-    <!-- 顶部工具栏 -->
-    <div class="editor-header">
-      <h2 class="editor-title">模板编辑器 Demo</h2>
-      <div class="header-actions">
-        <el-button @click="handleSave">
-          <el-icon><FolderOpened /></el-icon>
-          保存模板
-        </el-button>
-        <el-button @click="handleLoad">
-          <el-icon><Upload /></el-icon>
-          加载模板
-        </el-button>
-      </div>
-    </div>
-
-    <!-- 主体区域 -->
-    <div class="editor-body">
-      <!-- 左侧：素材和图层 -->
-      <div class="editor-sidebar left">
-        <el-tabs v-model="leftActiveTab">
-          <el-tab-pane label="素材库" name="materials">
-            <ElementToolbar
-              :has-selection="!!activeObject"
-              @add-rect="addRect"
-              @add-circle="addCircle"
-              @add-text="addText"
-              @add-image="addImage"
-              @delete-selected="deleteSelected"
-              @clear-canvas="handleClearCanvas"
-              @export-j-s-o-n="handleExportJSON"
-              @export-image="handleExportImage"
-            />
-          </el-tab-pane>
-          <el-tab-pane label="图层" name="layers">
-            <LayerPanel
-              :elements="elements"
-              :active-object-id="activeObject?.get('id')"
-              @select-element="selectElement"
-              @delete-element="deleteElement"
-            />
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <!-- 中间：画布预览 -->
-      <div class="editor-canvas">
-        <div class="canvas-container">
-          <div class="canvas-title">手机预览</div>
-          <CanvasEditor ref="canvasEditorRef" />
-        </div>
-      </div>
-
-      <!-- 右侧：属性面板 -->
-      <div class="editor-sidebar right">
-        <PropertyPanel :active-object="activeObject" @update="handlePropertyUpdate" />
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { useFabric } from "@@/composables/useFabric"
 import { FolderOpened, Upload } from "@element-plus/icons-vue"
@@ -84,10 +22,11 @@ const {
   deleteSelected,
   selectElement,
   deleteElement,
+  reorderLayers,
   clearCanvas,
   exportJSON,
   exportImage,
-  loadFromJSON,
+  loadFromJSON
 } = useFabric(computed(() => canvasEditorRef.value?.canvasEl))
 
 // 属性更新
@@ -95,6 +34,11 @@ function handlePropertyUpdate() {
   if (canvas) {
     canvas.renderAll()
   }
+}
+
+// 处理图层重排序
+function handleReorderLayers(newElements: any[]) {
+  reorderLayers(newElements)
 }
 
 // 清空画布
@@ -147,16 +91,81 @@ function handleLoad() {
       const json = JSON.parse(savedTemplate)
       loadFromJSON(json)
       ElMessage.success("模板加载成功")
-    }
-    catch {
+    } catch {
       ElMessage.error("模板加载失败")
     }
-  }
-  else {
+  } else {
     ElMessage.warning("没有保存的模板")
   }
 }
 </script>
+
+<template>
+  <div class="template-editor">
+    <!-- 顶部工具栏 -->
+    <div class="editor-header">
+      <h2 class="editor-title">
+        模板编辑器 Demo
+      </h2>
+      <div class="header-actions">
+        <el-button @click="handleSave">
+          <el-icon><FolderOpened /></el-icon>
+          保存模板
+        </el-button>
+        <el-button @click="handleLoad">
+          <el-icon><Upload /></el-icon>
+          加载模板
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 主体区域 -->
+    <div class="editor-body">
+      <!-- 左侧：素材和图层 -->
+      <div class="editor-sidebar left">
+        <el-tabs v-model="leftActiveTab">
+          <el-tab-pane label="素材库" name="materials">
+            <ElementToolbar
+              :has-selection="!!activeObject"
+              @add-rect="addRect"
+              @add-circle="addCircle"
+              @add-text="addText"
+              @add-image="addImage"
+              @delete-selected="deleteSelected"
+              @clear-canvas="handleClearCanvas"
+              @export-j-s-o-n="handleExportJSON"
+              @export-image="handleExportImage"
+            />
+          </el-tab-pane>
+          <el-tab-pane label="图层" name="layers">
+            <LayerPanel
+              :elements="elements"
+              :active-object-id="activeObject?.get('id')"
+              @select-element="selectElement"
+              @delete-element="deleteElement"
+              @reorder-layers="handleReorderLayers"
+            />
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- 中间：画布预览 -->
+      <div class="editor-canvas">
+        <div class="canvas-container">
+          <div class="canvas-title">
+            手机预览
+          </div>
+          <CanvasEditor ref="canvasEditorRef" />
+        </div>
+      </div>
+
+      <!-- 右侧：属性面板 -->
+      <div class="editor-sidebar right">
+        <PropertyPanel :active-object="activeObject" @update="handlePropertyUpdate" />
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped lang="scss">
 .template-editor {
