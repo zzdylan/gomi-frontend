@@ -1,114 +1,37 @@
 <script setup lang="ts">
-const props = defineProps<{
-  activeObject: any
+import type { KonvaElement } from "@@/composables/useKonva"
+
+defineProps<{
+  element: KonvaElement | null
 }>()
 
 const emit = defineEmits<{
-  update: []
+  update: [updates: Partial<KonvaElement>]
 }>()
 
-function getWidth() {
-  if (!props.activeObject) return 0
-  if (props.activeObject.type === "circle") {
-    return (props.activeObject.radius || 0) * 2
-  }
-  return props.activeObject.width * (props.activeObject.scaleX || 1)
-}
-
-function getHeight() {
-  if (!props.activeObject) return 0
-  if (props.activeObject.type === "circle") {
-    return (props.activeObject.radius || 0) * 2
-  }
-  return props.activeObject.height * (props.activeObject.scaleY || 1)
-}
-
-function handlePositionChange(prop: string, value: number | undefined) {
-  if (!props.activeObject || value === undefined) return
-  props.activeObject.set(prop, value)
-  emit("update")
-}
-
-function handleSizeChange(prop: string, value: number | undefined) {
-  if (!props.activeObject || value === undefined) return
-
-  if (props.activeObject.type === "circle") {
-    props.activeObject.set("radius", value / 2)
-  } else {
-    if (prop === "width") {
-      props.activeObject.set("scaleX", value / props.activeObject.width)
-    } else {
-      props.activeObject.set("scaleY", value / props.activeObject.height)
-    }
-  }
-
-  emit("update")
+// 直接更新属性，因为是响应式的
+function updateProp<K extends keyof KonvaElement>(key: K, value: KonvaElement[K]) {
+  emit("update", { [key]: value })
 }
 
 function handleRotationChange(value: number | number[]) {
-  if (!props.activeObject) return
   const angle = Array.isArray(value) ? value[0] : value
-  props.activeObject.set("angle", angle)
-  emit("update")
+  updateProp("rotation", angle)
 }
 
 function handleOpacityChange(value: number | number[]) {
-  if (!props.activeObject) return
   const opacity = Array.isArray(value) ? value[0] : value
-  props.activeObject.set("opacity", opacity / 100)
-  emit("update")
-}
-
-function handleFontSizeChange(value: number | undefined) {
-  if (!props.activeObject || value === undefined) return
-  props.activeObject.set("fontSize", value)
-  emit("update")
-}
-
-function handleColorChange(value: string | null) {
-  if (!props.activeObject || !value) return
-  props.activeObject.set("fill", value)
-  emit("update")
-}
-
-function handleFontWeightChange(value: string) {
-  if (!props.activeObject) return
-  props.activeObject.set("fontWeight", value)
-  emit("update")
-}
-
-function handleTextAlignChange(value: string | number | boolean | undefined) {
-  if (!props.activeObject || typeof value !== "string") return
-  props.activeObject.set("textAlign", value)
-  emit("update")
-}
-
-function handleFillChange(value: string | null) {
-  if (!props.activeObject || !value) return
-  props.activeObject.set("fill", value)
-  emit("update")
-}
-
-function handleStrokeChange(value: string | null) {
-  if (!props.activeObject || !value) return
-  props.activeObject.set("stroke", value)
-  emit("update")
-}
-
-function handleStrokeWidthChange(value: number | undefined) {
-  if (!props.activeObject || value === undefined) return
-  props.activeObject.set("strokeWidth", value)
-  emit("update")
+  updateProp("opacity", opacity / 100)
 }
 </script>
 
 <template>
-  <div class="property-panel">
+  <div class="property-panel-konva">
     <div class="panel-header">
       <span class="panel-title">属性设置</span>
     </div>
 
-    <div v-if="!activeObject" class="empty-state">
+    <div v-if="!element" class="empty-state">
       <el-empty description="请选择一个元素" :image-size="80" />
     </div>
 
@@ -122,91 +45,120 @@ function handleStrokeWidthChange(value: number | undefined) {
         <el-form label-width="60px" size="small">
           <el-form-item label="X 坐标">
             <el-input-number
-              :model-value="activeObject.left"
+              :model-value="element.x"
               :step="1"
               size="small"
-              @change="handlePositionChange('left', $event)"
+              @update:model-value="updateProp('x', $event!)"
             />
           </el-form-item>
 
           <el-form-item label="Y 坐标">
             <el-input-number
-              :model-value="activeObject.top"
+              :model-value="element.y"
               :step="1"
               size="small"
-              @change="handlePositionChange('top', $event)"
+              @update:model-value="updateProp('y', $event!)"
             />
           </el-form-item>
 
-          <el-form-item label="宽度">
+          <el-form-item v-if="element.type === 'rect'" label="宽度">
             <el-input-number
-              :model-value="getWidth()"
+              :model-value="element.width"
               :step="1"
               :min="1"
               size="small"
-              @change="handleSizeChange('width', $event)"
+              @update:model-value="updateProp('width', $event!)"
             />
           </el-form-item>
 
-          <el-form-item label="高度">
+          <el-form-item v-if="element.type === 'rect'" label="高度">
             <el-input-number
-              :model-value="getHeight()"
+              :model-value="element.height"
               :step="1"
               :min="1"
               size="small"
-              @change="handleSizeChange('height', $event)"
+              @update:model-value="updateProp('height', $event!)"
+            />
+          </el-form-item>
+
+          <el-form-item v-if="element.type === 'circle'" label="直径">
+            <el-input-number
+              :model-value="(element.radius || 0) * 2"
+              :step="1"
+              :min="1"
+              size="small"
+              @update:model-value="updateProp('radius', $event! / 2)"
+            />
+          </el-form-item>
+
+          <el-form-item v-if="element.type === 'text'" label="宽度">
+            <el-input-number
+              :model-value="element.width"
+              :step="1"
+              :min="20"
+              size="small"
+              @update:model-value="updateProp('width', $event!)"
             />
           </el-form-item>
 
           <el-form-item label="旋转">
             <el-slider
-              :model-value="activeObject.angle || 0"
+              :model-value="element.rotation || 0"
               :min="0"
               :max="360"
-              @change="handleRotationChange"
+              @update:model-value="handleRotationChange"
             />
           </el-form-item>
 
           <el-form-item label="透明度">
             <el-slider
-              :model-value="(activeObject.opacity || 1) * 100"
+              :model-value="(element.opacity || 1) * 100"
               :min="0"
               :max="100"
-              @change="handleOpacityChange"
+              @update:model-value="handleOpacityChange"
             />
           </el-form-item>
         </el-form>
       </div>
 
       <!-- 文本属性 -->
-      <div v-if="activeObject.type === 'textbox'" class="property-section">
+      <div v-if="element.type === 'text'" class="property-section">
         <div class="section-title">
           文本属性
         </div>
 
         <el-form label-width="60px" size="small">
+          <el-form-item label="文本">
+            <el-input
+              :model-value="element.text"
+              type="textarea"
+              :rows="3"
+              @update:model-value="updateProp('text', $event)"
+            />
+          </el-form-item>
+
           <el-form-item label="字号">
             <el-input-number
-              :model-value="activeObject.fontSize"
+              :model-value="element.fontSize"
               :step="1"
               :min="12"
               :max="100"
               size="small"
-              @change="handleFontSizeChange"
+              @update:model-value="updateProp('fontSize', $event!)"
             />
           </el-form-item>
 
           <el-form-item label="颜色">
             <el-color-picker
-              :model-value="activeObject.fill"
-              @change="handleColorChange"
+              :model-value="element.fill"
+              @update:model-value="updateProp('fill', $event!)"
             />
           </el-form-item>
 
           <el-form-item label="粗细">
             <el-select
-              :model-value="activeObject.fontWeight || 'normal'"
-              @change="handleFontWeightChange"
+              :model-value="element.fontWeight || 'normal'"
+              @update:model-value="updateProp('fontWeight', $event)"
             >
               <el-option label="正常" value="normal" />
               <el-option label="粗体" value="bold" />
@@ -215,9 +167,9 @@ function handleStrokeWidthChange(value: number | undefined) {
 
           <el-form-item label="对齐">
             <el-radio-group
-              :model-value="activeObject.textAlign || 'left'"
+              :model-value="element.textAlign || 'left'"
               size="small"
-              @change="handleTextAlignChange"
+              @update:model-value="updateProp('textAlign', $event as string)"
             >
               <el-radio-button value="left">
                 左
@@ -234,7 +186,7 @@ function handleStrokeWidthChange(value: number | undefined) {
       </div>
 
       <!-- 填充颜色（矩形、圆形） -->
-      <div v-if="activeObject.type === 'rect' || activeObject.type === 'circle'" class="property-section">
+      <div v-if="element.type === 'rect' || element.type === 'circle'" class="property-section">
         <div class="section-title">
           样式属性
         </div>
@@ -242,26 +194,26 @@ function handleStrokeWidthChange(value: number | undefined) {
         <el-form label-width="60px" size="small">
           <el-form-item label="填充">
             <el-color-picker
-              :model-value="activeObject.fill"
-              @change="handleFillChange"
+              :model-value="element.fill"
+              @update:model-value="updateProp('fill', $event!)"
             />
           </el-form-item>
 
           <el-form-item label="边框">
             <el-color-picker
-              :model-value="activeObject.stroke"
-              @change="handleStrokeChange"
+              :model-value="element.stroke"
+              @update:model-value="updateProp('stroke', $event!)"
             />
           </el-form-item>
 
           <el-form-item label="边框宽">
             <el-input-number
-              :model-value="activeObject.strokeWidth"
+              :model-value="element.strokeWidth"
               :step="1"
               :min="0"
               :max="20"
               size="small"
-              @change="handleStrokeWidthChange"
+              @update:model-value="updateProp('strokeWidth', $event!)"
             />
           </el-form-item>
         </el-form>
@@ -271,7 +223,7 @@ function handleStrokeWidthChange(value: number | undefined) {
 </template>
 
 <style scoped lang="scss">
-.property-panel {
+.property-panel-konva {
   width: 100%;
   height: 100%;
   background: white;
@@ -282,8 +234,12 @@ function handleStrokeWidthChange(value: number | undefined) {
 }
 
 .panel-header {
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #eee;
+  background: #fafafa;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
 
 .panel-title {

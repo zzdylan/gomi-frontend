@@ -2,6 +2,7 @@ import type { App } from "vue"
 import { installElementPlusIcons } from "./element-plus-icons"
 import { installPermissionDirective } from "./permission-directive"
 import { installSvgIcon } from "./svg-icon"
+import { installVueKonva } from "./vue-konva"
 import { installVxeTable } from "./vxe-table"
 
 export function installPlugins(app: App) {
@@ -9,4 +10,5 @@ export function installPlugins(app: App) {
   installPermissionDirective(app)
   installSvgIcon(app)
   installVxeTable(app)
+  installVueKonva(app)
 }

@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import { useFabric } from "@@/composables/useFabric"
+import { useKonva } from "@@/composables/useKonva"
 import { FolderOpened, Upload } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
-import CanvasEditor from "./components/canvas-editor.vue"
+import CanvasEditorKonva from "./components/canvas-editor-konva.vue"
 import ElementToolbar from "./components/element-toolbar.vue"
 import LayerPanel from "./components/layer-panel.vue"
-import PropertyPanel from "./components/property-panel.vue"
+import PropertyPanelKonva from "./components/property-panel-konva.vue"
 
 const leftActiveTab = ref("materials")
-const canvasEditorRef = ref<InstanceType<typeof CanvasEditor>>()
+const canvasEditorRef = ref<InstanceType<typeof CanvasEditorKonva>>()
 
-// 使用 composable
+// 使用 Konva composable
 const {
-  canvas,
-  activeObject,
   elements,
+  selectedId,
+  activeElement,
+  stageSize,
   addRect,
   addCircle,
   addText,
@@ -25,20 +26,35 @@ const {
   reorderLayers,
   clearCanvas,
   exportJSON,
-  exportImage,
-  loadFromJSON
-} = useFabric(computed(() => canvasEditorRef.value?.canvasEl))
+  loadFromJSON,
+  updateElement
+} = useKonva()
 
-// 属性更新
-function handlePropertyUpdate() {
-  if (canvas) {
-    canvas.renderAll()
+// 处理属性更新 - 超级简单，因为是响应式的
+function handlePropertyUpdate(updates: any) {
+  if (selectedId.value) {
+    updateElement(selectedId.value, updates)
   }
 }
 
+// 处理画布选择
+function handleCanvasSelect(id: string | null) {
+  selectedId.value = id
+}
+
+// 处理画布更新
+function handleCanvasUpdate(id: string, updates: any) {
+  updateElement(id, updates)
+}
+
 // 处理图层重排序
-function handleReorderLayers(newElements: any[]) {
-  reorderLayers(newElements)
+function handleReorderLayers(newLayerElements: any[]) {
+  // 根据新的图层顺序，从完整元素数组中找到对应的元素
+  const reorderedElements = newLayerElements.map((layerEl) => {
+    return elements.value.find(el => el.id === layerEl.id)
+  }).filter(Boolean) as any[]
+
+  reorderLayers(reorderedElements)
 }
 
 // 清空画布
@@ -64,7 +80,7 @@ function handleExportJSON() {
 
 // 导出图片
 function handleExportImage() {
-  const dataURL = exportImage()
+  const dataURL = canvasEditorRef.value?.exportToDataURL()
   if (dataURL) {
     const a = document.createElement("a")
     a.href = dataURL
@@ -78,14 +94,14 @@ function handleExportImage() {
 function handleSave() {
   const json = exportJSON()
   if (json) {
-    localStorage.setItem("fabric-template", JSON.stringify(json))
+    localStorage.setItem("konva-template", JSON.stringify(json))
     ElMessage.success("模板已保存到本地")
   }
 }
 
 // 加载模板
 function handleLoad() {
-  const savedTemplate = localStorage.getItem("fabric-template")
+  const savedTemplate = localStorage.getItem("konva-template")
   if (savedTemplate) {
     try {
       const json = JSON.parse(savedTemplate)
@@ -98,6 +114,15 @@ function handleLoad() {
     ElMessage.warning("没有保存的模板")
   }
 }
+
+// 转换元素格式供图层面板使用 - 只传递图层面板需要的字段
+const layerElements = computed(() => {
+  return elements.value.map(el => ({
+    id: el.id,
+    type: el.type,
+    name: el.name
+  }))
+})
 </script>
 
 <template>
@@ -105,7 +130,7 @@ function handleLoad() {
     <!-- 顶部工具栏 -->
     <div class="editor-header">
       <h2 class="editor-title">
-        模板编辑器 Demo
+        模板编辑器 (Konva)
       </h2>
       <div class="header-actions">
         <el-button @click="handleSave">
@@ -123,10 +148,10 @@ function handleLoad() {
     <div class="editor-body">
       <!-- 左侧：素材和图层 -->
       <div class="editor-sidebar left">
-        <el-tabs v-model="leftActiveTab">
+        <el-tabs v-model="leftActiveTab" tab-position="top">
           <el-tab-pane label="素材库" name="materials">
             <ElementToolbar
-              :has-selection="!!activeObject"
+              :has-selection="!!selectedId"
               @add-rect="addRect"
               @add-circle="addCircle"
               @add-text="addText"
@@ -139,8 +164,8 @@ function handleLoad() {
           </el-tab-pane>
           <el-tab-pane label="图层" name="layers">
             <LayerPanel
-              :elements="elements"
-              :active-object-id="activeObject?.get('id')"
+              :elements="layerElements"
+              :active-object-id="selectedId"
               @select-element="selectElement"
               @delete-element="deleteElement"
               @reorder-layers="handleReorderLayers"
@@ -152,16 +177,23 @@ function handleLoad() {
       <!-- 中间：画布预览 -->
       <div class="editor-canvas">
         <div class="canvas-container">
-          <div class="canvas-title">
-            手机预览
-          </div>
-          <CanvasEditor ref="canvasEditorRef" />
+          <CanvasEditorKonva
+            ref="canvasEditorRef"
+            :elements="elements"
+            :selected-id="selectedId"
+            :stage-size="stageSize"
+            @select="handleCanvasSelect"
+            @update="handleCanvasUpdate"
+          />
         </div>
       </div>
 
       <!-- 右侧：属性面板 -->
       <div class="editor-sidebar right">
-        <PropertyPanel :active-object="activeObject" @update="handlePropertyUpdate" />
+        <PropertyPanelKonva
+          :element="activeElement"
+          @update="handlePropertyUpdate"
+        />
       </div>
     </div>
   </div>
@@ -225,12 +257,25 @@ function handleLoad() {
 
       .el-tabs__header {
         margin: 0;
+        padding: 0;
+        background: #fafafa;
+        border-bottom: 1px solid #e8e8e8;
+        order: -1; // 强制 header 在上面
+        flex-shrink: 0;
+      }
+
+      .el-tabs__nav-wrap {
         padding: 0 16px;
+        min-height: 40px;
+        display: flex;
+        align-items: flex-end;
       }
 
       .el-tabs__content {
         flex: 1;
         overflow-y: auto;
+        padding: 16px;
+        order: 1; // 内容在下面
       }
 
       .el-tab-pane {
@@ -241,6 +286,7 @@ function handleLoad() {
 
   &.right {
     width: 300px;
+    padding-top: 0; // 确保顶部对齐
   }
 }
 

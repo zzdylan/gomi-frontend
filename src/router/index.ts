@@ -96,7 +96,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   {
     path: "/template",
     component: Layouts,
-    redirect: "/template/editor",
+    redirect: "/template/editor-konva",
     name: "Template",
     meta: {
       title: "模板管理",
@@ -104,9 +104,9 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
-        path: "editor",
-        component: () => import("@/pages/template-editor/index.vue"),
-        name: "TemplateEditor",
+        path: "editor-konva",
+        component: () => import("@/pages/template-editor/index-konva.vue"),
+        name: "TemplateEditorKonva",
         meta: {
           title: "模板编辑器",
           keepAlive: true

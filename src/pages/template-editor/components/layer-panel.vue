@@ -1,24 +1,32 @@
 <script setup lang="ts">
-import type { FabricElement } from "@@/composables/useFabric"
 import { Delete, EditPen, Grid, Picture, Rank, Sunny } from "@element-plus/icons-vue"
 import { VueDraggable } from "vue-draggable-plus"
 
+// 图层面板只需要这些基本信息
+interface LayerItem {
+  id: string
+  type: "rect" | "circle" | "text" | "image"
+  name: string
+  [key: string]: any // 允许其他属性
+}
+
 const props = defineProps<{
-  elements: FabricElement[]
-  activeObjectId?: string
+  elements: LayerItem[]
+  activeObjectId?: string | null
 }>()
 
 const emit = defineEmits<{
   selectElement: [id: string]
   deleteElement: [id: string]
-  reorderLayers: [elements: FabricElement[]]
+  reorderLayers: [elements: LayerItem[]]
 }>()
 
-const localElements = ref<FabricElement[]>([])
+const localElements = ref<LayerItem[]>([])
 
 watch(
   () => props.elements,
   (newElements) => {
+    console.log("图层面板接收到的元素:", newElements)
     localElements.value = [...newElements]
   },
   { immediate: true }
@@ -31,6 +39,11 @@ function isActive(id: string) {
 function handleDragEnd() {
   emit("reorderLayers", localElements.value)
 }
+
+// 添加调试日志
+onMounted(() => {
+  console.log("图层面板挂载, localElements:", localElements.value)
+})
 </script>
 
 <template>
@@ -43,7 +56,10 @@ function handleDragEnd() {
     </div>
 
     <div class="layer-list">
+      <el-empty v-if="localElements.length === 0" description="暂无图层" :image-size="100" />
+
       <VueDraggable
+        v-else
         v-model="localElements"
         :animation="150"
         handle=".drag-handle"
@@ -81,8 +97,6 @@ function handleDragEnd() {
           </div>
         </div>
       </VueDraggable>
-
-      <el-empty v-if="elements.length === 0" description="暂无图层" :image-size="100" />
     </div>
   </div>
 </template>
