@@ -92,6 +92,27 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/template",
+    component: Layouts,
+    redirect: "/template/editor",
+    name: "Template",
+    meta: {
+      title: "模板管理",
+      elIcon: "Document"
+    },
+    children: [
+      {
+        path: "editor",
+        component: () => import("@/pages/template-editor/index.vue"),
+        name: "TemplateEditor",
+        meta: {
+          title: "模板编辑器",
+          keepAlive: true
+        }
+      }
+    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {
