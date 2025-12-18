@@ -1,3 +1,107 @@
+<script setup lang="ts">
+const props = defineProps<{
+  activeObject: any
+}>()
+
+const emit = defineEmits<{
+  update: []
+}>()
+
+function getWidth() {
+  if (!props.activeObject) return 0
+  if (props.activeObject.type === "circle") {
+    return (props.activeObject.radius || 0) * 2
+  }
+  return props.activeObject.width * (props.activeObject.scaleX || 1)
+}
+
+function getHeight() {
+  if (!props.activeObject) return 0
+  if (props.activeObject.type === "circle") {
+    return (props.activeObject.radius || 0) * 2
+  }
+  return props.activeObject.height * (props.activeObject.scaleY || 1)
+}
+
+function handlePositionChange(prop: string, value: number | undefined) {
+  if (!props.activeObject || value === undefined) return
+  props.activeObject.set(prop, value)
+  emit("update")
+}
+
+function handleSizeChange(prop: string, value: number | undefined) {
+  if (!props.activeObject || value === undefined) return
+
+  if (props.activeObject.type === "circle") {
+    props.activeObject.set("radius", value / 2)
+  } else {
+    if (prop === "width") {
+      props.activeObject.set("scaleX", value / props.activeObject.width)
+    } else {
+      props.activeObject.set("scaleY", value / props.activeObject.height)
+    }
+  }
+
+  emit("update")
+}
+
+function handleRotationChange(value: number | number[]) {
+  if (!props.activeObject) return
+  const angle = Array.isArray(value) ? value[0] : value
+  props.activeObject.set("angle", angle)
+  emit("update")
+}
+
+function handleOpacityChange(value: number | number[]) {
+  if (!props.activeObject) return
+  const opacity = Array.isArray(value) ? value[0] : value
+  props.activeObject.set("opacity", opacity / 100)
+  emit("update")
+}
+
+function handleFontSizeChange(value: number | undefined) {
+  if (!props.activeObject || value === undefined) return
+  props.activeObject.set("fontSize", value)
+  emit("update")
+}
+
+function handleColorChange(value: string | null) {
+  if (!props.activeObject || !value) return
+  props.activeObject.set("fill", value)
+  emit("update")
+}
+
+function handleFontWeightChange(value: string) {
+  if (!props.activeObject) return
+  props.activeObject.set("fontWeight", value)
+  emit("update")
+}
+
+function handleTextAlignChange(value: string | number | boolean | undefined) {
+  if (!props.activeObject || typeof value !== "string") return
+  props.activeObject.set("textAlign", value)
+  emit("update")
+}
+
+function handleFillChange(value: string | null) {
+  if (!props.activeObject || !value) return
+  props.activeObject.set("fill", value)
+  emit("update")
+}
+
+function handleStrokeChange(value: string | null) {
+  if (!props.activeObject || !value) return
+  props.activeObject.set("stroke", value)
+  emit("update")
+}
+
+function handleStrokeWidthChange(value: number | undefined) {
+  if (!props.activeObject || value === undefined) return
+  props.activeObject.set("strokeWidth", value)
+  emit("update")
+}
+</script>
+
 <template>
   <div class="property-panel">
     <div class="panel-header">
@@ -11,7 +115,9 @@
     <div v-else class="property-content">
       <!-- 基础属性 -->
       <div class="property-section">
-        <div class="section-title">基础属性</div>
+        <div class="section-title">
+          基础属性
+        </div>
 
         <el-form label-width="60px" size="small">
           <el-form-item label="X 坐标">
@@ -74,7 +180,9 @@
 
       <!-- 文本属性 -->
       <div v-if="activeObject.type === 'textbox'" class="property-section">
-        <div class="section-title">文本属性</div>
+        <div class="section-title">
+          文本属性
+        </div>
 
         <el-form label-width="60px" size="small">
           <el-form-item label="字号">
@@ -111,9 +219,15 @@
               size="small"
               @change="handleTextAlignChange"
             >
-              <el-radio-button value="left">左</el-radio-button>
-              <el-radio-button value="center">中</el-radio-button>
-              <el-radio-button value="right">右</el-radio-button>
+              <el-radio-button value="left">
+                左
+              </el-radio-button>
+              <el-radio-button value="center">
+                中
+              </el-radio-button>
+              <el-radio-button value="right">
+                右
+              </el-radio-button>
             </el-radio-group>
           </el-form-item>
         </el-form>
@@ -121,7 +235,9 @@
 
       <!-- 填充颜色（矩形、圆形） -->
       <div v-if="activeObject.type === 'rect' || activeObject.type === 'circle'" class="property-section">
-        <div class="section-title">样式属性</div>
+        <div class="section-title">
+          样式属性
+        </div>
 
         <el-form label-width="60px" size="small">
           <el-form-item label="填充">
@@ -153,113 +269,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-const props = defineProps<{
-  activeObject: any
-}>()
-
-const emit = defineEmits<{
-  update: []
-}>()
-
-function getWidth() {
-  if (!props.activeObject) return 0
-  if (props.activeObject.type === "circle") {
-    return (props.activeObject.radius || 0) * 2
-  }
-  return props.activeObject.width * (props.activeObject.scaleX || 1)
-}
-
-function getHeight() {
-  if (!props.activeObject) return 0
-  if (props.activeObject.type === "circle") {
-    return (props.activeObject.radius || 0) * 2
-  }
-  return props.activeObject.height * (props.activeObject.scaleY || 1)
-}
-
-function handlePositionChange(prop: string, value: number) {
-  if (!props.activeObject) return
-  props.activeObject.set(prop, value)
-  emit("update")
-}
-
-function handleSizeChange(prop: string, value: number) {
-  if (!props.activeObject) return
-
-  if (props.activeObject.type === "circle") {
-    props.activeObject.set("radius", value / 2)
-  }
-  else {
-    const currentWidth = props.activeObject.width * props.activeObject.scaleX
-    const currentHeight = props.activeObject.height * props.activeObject.scaleY
-
-    if (prop === "width") {
-      props.activeObject.set("scaleX", value / props.activeObject.width)
-    }
-    else {
-      props.activeObject.set("scaleY", value / props.activeObject.height)
-    }
-  }
-
-  emit("update")
-}
-
-function handleRotationChange(value: number) {
-  if (!props.activeObject) return
-  props.activeObject.set("angle", value)
-  emit("update")
-}
-
-function handleOpacityChange(value: number) {
-  if (!props.activeObject) return
-  props.activeObject.set("opacity", value / 100)
-  emit("update")
-}
-
-function handleFontSizeChange(value: number) {
-  if (!props.activeObject) return
-  props.activeObject.set("fontSize", value)
-  emit("update")
-}
-
-function handleColorChange(value: string) {
-  if (!props.activeObject) return
-  props.activeObject.set("fill", value)
-  emit("update")
-}
-
-function handleFontWeightChange(value: string) {
-  if (!props.activeObject) return
-  props.activeObject.set("fontWeight", value)
-  emit("update")
-}
-
-function handleTextAlignChange(value: string) {
-  if (!props.activeObject) return
-  props.activeObject.set("textAlign", value)
-  emit("update")
-}
-
-function handleFillChange(value: string) {
-  if (!props.activeObject) return
-  props.activeObject.set("fill", value)
-  emit("update")
-}
-
-function handleStrokeChange(value: string) {
-  if (!props.activeObject) return
-  props.activeObject.set("stroke", value)
-  emit("update")
-}
-
-function handleStrokeWidthChange(value: number) {
-  if (!props.activeObject) return
-  props.activeObject.set("strokeWidth", value)
-  emit("update")
-}
-</script>
 
 <style scoped lang="scss">
 .property-panel {
