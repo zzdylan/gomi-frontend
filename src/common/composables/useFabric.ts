@@ -27,11 +27,11 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
 
     // 监听对象选中事件
     canvas.on("selection:created", (e) => {
-      activeObject.value = e.selected?.[0]
+      activeObject.value = markRaw(e.selected?.[0])
     })
 
     canvas.on("selection:updated", (e) => {
-      activeObject.value = e.selected?.[0]
+      activeObject.value = markRaw(e.selected?.[0])
     })
 
     canvas.on("selection:cleared", () => {
@@ -148,8 +148,24 @@ export function useFabric(canvasEl: Ref<HTMLCanvasElement | undefined>) {
   const deleteSelected = () => {
     if (!canvas || !activeObject.value) return
 
-    canvas.remove(activeObject.value)
+    const objToRemove = activeObject.value
+    console.log("Deleting object:", objToRemove)
+
+    // 先取消选中
+    canvas.discardActiveObject()
+
+    // 删除对象
+    const removed = canvas.remove(objToRemove)
+    console.log("Remove result:", removed, "Objects after remove:", canvas.getObjects().length)
+
+    // 清空引用
+    activeObject.value = null
+
+    // 重新渲染
     canvas.renderAll()
+
+    // 手动触发更新
+    canvas.requestRenderAll()
   }
 
   // 选中指定图层
