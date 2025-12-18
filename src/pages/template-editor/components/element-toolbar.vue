@@ -121,19 +121,27 @@ const handleImageUpload = (file: UploadRawFile) => {
   flex-direction: column;
   gap: 8px;
 
-  .el-button {
+  > * {
     width: 100%;
-    justify-content: flex-start;
   }
 
-  :deep(.el-upload) {
+  .el-button {
+    width: 100% !important;
+    justify-content: flex-start;
+    margin: 0 !important;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  :deep(.el-upload),
+  :deep(.el-popconfirm__reference) {
     width: 100%;
     display: block;
+  }
 
-    .el-button {
-      width: 100%;
-      justify-content: flex-start;
-    }
+  :deep(.el-button) {
+    width: 100% !important;
+    margin: 0 !important;
   }
 }
 
