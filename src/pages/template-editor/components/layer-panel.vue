@@ -26,7 +26,6 @@ const localElements = ref<LayerItem[]>([])
 watch(
   () => props.elements,
   (newElements) => {
-    console.log("图层面板接收到的元素:", newElements)
     localElements.value = [...newElements]
   },
   { immediate: true }
@@ -40,10 +39,22 @@ function handleDragEnd() {
   emit("reorderLayers", localElements.value)
 }
 
-// 添加调试日志
-onMounted(() => {
-  console.log("图层面板挂载, localElements:", localElements.value)
-})
+// 获取图层显示名称
+function getLayerDisplayName(element: LayerItem) {
+  if (element.type === "text") {
+    // 显示文本内容，最多显示15个字符
+    const text = (element as any).text || "文本"
+    return text.length > 15 ? `${text.substring(0, 15)}...` : text
+  } else if (element.type === "image") {
+    // 显示图片文件名
+    const imageUrl = (element as any).imageUrl || ""
+    const fileName = imageUrl.split("/").pop() || "图片"
+    return fileName.length > 20 ? `${fileName.substring(0, 20)}...` : fileName
+  } else {
+    // 矩形和圆形显示默认名称
+    return element.name
+  }
+}
 </script>
 
 <template>
@@ -82,7 +93,7 @@ onMounted(() => {
               <EditPen v-else-if="element.type === 'text'" />
               <Picture v-else-if="element.type === 'image'" />
             </el-icon>
-            <span class="layer-name">{{ element.name }}</span>
+            <span class="layer-name">{{ getLayerDisplayName(element) }}</span>
           </div>
 
           <div class="layer-actions">

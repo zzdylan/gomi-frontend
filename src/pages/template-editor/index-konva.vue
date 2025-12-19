@@ -115,12 +115,14 @@ function handleLoad() {
   }
 }
 
-// 转换元素格式供图层面板使用 - 只传递图层面板需要的字段
+// 转换元素格式供图层面板使用 - 传递必要的显示字段
 const layerElements = computed(() => {
   return elements.value.map(el => ({
     id: el.id,
     type: el.type,
-    name: el.name
+    name: el.name,
+    text: el.text, // 文本元素的文字内容
+    imageUrl: el.imageUrl // 图片元素的URL
   }))
 })
 </script>
