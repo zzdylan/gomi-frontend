@@ -260,7 +260,7 @@ defineExpose({
         />
 
         <!-- 渲染所有元素 - 核心：必须设置 id 属性用于 Transformer 查找 -->
-        <template v-for="element in elements" :key="element.id">
+        <template v-for="element in elements" :key="`el-${element.id}`">
           <!-- 矩形 -->
           <v-rect
             v-if="element.type === 'rect'"
@@ -305,6 +305,7 @@ defineExpose({
           <!-- 文本 -->
           <v-text
             v-else-if="element.type === 'text'"
+            :key="`text-${element.id}-${element.fontFamily}`"
             :config="{
               id: element.id,
               name: element.id,
@@ -312,7 +313,7 @@ defineExpose({
               y: element.y,
               text: element.text,
               fontSize: element.fontSize,
-              fontFamily: 'Arial',
+              fontFamily: element.fontFamily || 'Arial',
               fill: element.fill,
               width: element.width,
               align: element.textAlign,
@@ -321,6 +322,10 @@ defineExpose({
               opacity: element.opacity,
               draggable: true,
               visible: editingTextId !== element.id,
+              shadowColor: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.color : undefined,
+              shadowBlur: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.blur : 0,
+              shadowOffsetX: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.offsetX : 0,
+              shadowOffsetY: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.offsetY : 0,
             }"
             @dragend="handleDragEnd(element.id, $event)"
             @transformend="handleTransformEnd(element.id, $event)"

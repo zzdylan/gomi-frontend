@@ -1,5 +1,24 @@
 import { ref } from "vue"
 
+// 出入场动画类型
+export type AnimationType = "none" | "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "bounce"
+
+// 文字特效类型
+export interface TextEffect {
+  shadow?: {
+    enabled: boolean
+    color: string
+    blur: number
+    offsetX: number
+    offsetY: number
+  }
+  gradient?: {
+    enabled: boolean
+    colors: string[]
+    angle: number
+  }
+}
+
 export interface KonvaElement {
   id: string
   type: "rect" | "circle" | "text" | "image"
@@ -19,11 +38,26 @@ export interface KonvaElement {
   text?: string
   fontSize?: number
   fontWeight?: string
+  fontFamily?: string // 新增：字体家族
   textAlign?: string
+  textEffect?: TextEffect // 新增：文字特效
   // 图片属性
   imageUrl?: string
   scaleX?: number
   scaleY?: number
+  // 视频时间轴属性
+  timeline?: {
+    startTime: number // 入场时间（秒）
+    duration: number // 持续时间（秒）
+    endTime: number // 出场时间（秒），计算属性：startTime + duration
+  }
+  // 出入场动画
+  animation?: {
+    in: AnimationType // 入场动画
+    out: AnimationType // 出场动画
+    inDuration: number // 入场动画时长（秒）
+    outDuration: number // 出场动画时长（秒）
+  }
 }
 
 export function useKonva() {
@@ -92,7 +126,21 @@ export function useKonva() {
       fontSize: 24,
       fill: "#1f2937",
       fontWeight: "normal",
-      textAlign: "left"
+      fontFamily: "Arial",
+      textAlign: "left",
+      // 默认时间轴配置
+      timeline: {
+        startTime: 0,
+        duration: 3,
+        endTime: 3
+      },
+      // 默认动画配置
+      animation: {
+        in: "fade",
+        out: "fade",
+        inDuration: 0.5,
+        outDuration: 0.5
+      }
     })
     selectedId.value = id
   }
