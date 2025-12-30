@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps } from "vxe-table"
-import { batchDeletePackageApi, createPackageApi, deletePackageApi, getPackageListApi, updatePackageApi } from "./apis"
-import type { PackageInfo, PackageBenefitConfig } from "./apis/type"
-import { getAllBenefitsApi } from "../benefit/apis"
 import type { BenefitInfo } from "../benefit/apis/type"
+import type { PackageBenefitConfig } from "./apis/type"
+import { getAllBenefitsApi } from "../benefit/apis"
+import { batchDeletePackageApi, createPackageApi, deletePackageApi, getPackageListApi, updatePackageApi } from "./apis"
 
 defineOptions({
   name: "PackageManagement"
@@ -21,16 +21,16 @@ const IS_MAIN_OPTIONS = [
   { label: "附加套餐", value: false }
 ]
 
-const getPackageStatusLabel = (status: number) => {
-  return PACKAGE_STATUS_OPTIONS.find((item) => item.value === status)?.label || "未知"
+function getPackageStatusLabel(status: number) {
+  return PACKAGE_STATUS_OPTIONS.find(item => item.value === status)?.label || "未知"
 }
 
-const getPackageStatusType = (status: number) => {
+function getPackageStatusType(status: number) {
   return status === 1 ? "success" : "info"
 }
 
 // 价格格式化(分转元)
-const formatPrice = (price: number) => {
+function formatPrice(price: number) {
   return (price / 100).toFixed(2)
 }
 // #endregion
@@ -269,7 +269,7 @@ const formData = reactive<FormData>({
 const allBenefits = ref<BenefitInfo[]>([])
 
 // 加载所有启用的权益
-const loadAllBenefits = async () => {
+async function loadAllBenefits() {
   try {
     const res = await getAllBenefitsApi()
     allBenefits.value = res.data.items || []
@@ -279,7 +279,7 @@ const loadAllBenefits = async () => {
 }
 
 // 添加权益配置
-const addBenefitConfig = () => {
+function addBenefitConfig() {
   formData.benefits.push({
     benefit_id: "",
     amount: 1
@@ -287,7 +287,7 @@ const addBenefitConfig = () => {
 }
 
 // 删除权益配置
-const removeBenefitConfig = (index: number) => {
+function removeBenefitConfig(index: number) {
   formData.benefits.splice(index, 1)
 }
 
@@ -400,7 +400,7 @@ const xFormOpt = reactive<VxeFormProps>({
     name: [{ required: true, message: "请输入套餐名称" }],
     code: [
       { required: true, message: "请输入套餐编码" },
-      { pattern: /^[a-zA-Z0-9_-]+$/, message: "只能包含字母、数字、下划线和破折号" }
+      { pattern: /^[\w-]+$/, message: "只能包含字母、数字、下划线和破折号" }
     ],
     price: [{ required: true, message: "请输入套餐价格" }],
     duration: [{ required: true, message: "请输入有效期" }]
@@ -408,7 +408,7 @@ const xFormOpt = reactive<VxeFormProps>({
   data: formData
 })
 
-const resetForm = () => {
+function resetForm() {
   Object.assign(formData, {
     name: "",
     code: "",
@@ -421,7 +421,7 @@ const resetForm = () => {
   })
 }
 
-const openDrawer = (type: "create" | "update", row?: RowMeta) => {
+function openDrawer(type: "create" | "update", row?: RowMeta) {
   currentFormType.value = type
   loadAllBenefits() // 加载权益列表
 
@@ -446,18 +446,18 @@ const openDrawer = (type: "create" | "update", row?: RowMeta) => {
       is_main: row.is_main,
       duration: row.duration,
       status: row.status,
-      benefits: benefits
+      benefits
     })
   }
   drawerVisible.value = true
 }
 
-const closeDrawer = () => {
+function closeDrawer() {
   drawerVisible.value = false
   resetForm()
 }
 
-const submitForm = async () => {
+async function submitForm() {
   const $form = xFormDom.value
   if (!$form) return
 
@@ -494,15 +494,15 @@ const submitForm = async () => {
 // #endregion
 
 // #region 操作
-const handleCreate = () => {
+function handleCreate() {
   openDrawer("create")
 }
 
-const handleUpdate = (row: RowMeta) => {
+function handleUpdate(row: RowMeta) {
   openDrawer("update", row)
 }
 
-const handleDelete = (row: RowMeta) => {
+function handleDelete(row: RowMeta) {
   const options: ElMessageBoxOptions = {
     title: "删除确认",
     message: h("p", null, [
@@ -526,7 +526,7 @@ const handleDelete = (row: RowMeta) => {
     })
 }
 
-const handleBatchDelete = () => {
+function handleBatchDelete() {
   const $grid = xGridDom.value
   if (!$grid) return
 
@@ -546,7 +546,7 @@ const handleBatchDelete = () => {
 
   ElMessageBox.confirm(options.message!, options.title, options)
     .then(async () => {
-      const ids = selectRecords.map((item) => item.id)
+      const ids = selectRecords.map(item => item.id)
       await batchDeletePackageApi({ ids })
       ElMessage.success("删除成功")
       xGridDom.value?.commitProxy("query")
@@ -569,8 +569,12 @@ onMounted(() => {
     <vxe-grid ref="xGridDom" v-bind="xGridOpt">
       <!-- 工具栏 -->
       <template #toolbar-btns>
-        <vxe-button status="primary" icon="vxe-icon-add" @click="handleCreate">新增</vxe-button>
-        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleBatchDelete">批量删除</vxe-button>
+        <vxe-button status="primary" icon="vxe-icon-add" @click="handleCreate">
+          新增
+        </vxe-button>
+        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleBatchDelete">
+          批量删除
+        </vxe-button>
       </template>
 
       <!-- 价格插槽 -->
@@ -604,8 +608,12 @@ onMounted(() => {
 
       <!-- 操作插槽 -->
       <template #action-slot="{ row }">
-        <vxe-button status="primary" icon="vxe-icon-edit" @click="handleUpdate(row)">编辑</vxe-button>
-        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleDelete(row)">删除</vxe-button>
+        <vxe-button status="primary" icon="vxe-icon-edit" @click="handleUpdate(row)">
+          编辑
+        </vxe-button>
+        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleDelete(row)">
+          删除
+        </vxe-button>
       </template>
     </vxe-grid>
 
@@ -615,7 +623,9 @@ onMounted(() => {
 
       <!-- 权益配置 -->
       <div style="padding: 0 20px 20px">
-        <el-divider content-position="left">套餐权益配置</el-divider>
+        <el-divider content-position="left">
+          套餐权益配置
+        </el-divider>
 
         <div v-for="(benefit, index) in formData.benefits" :key="index" style="margin-bottom: 15px">
           <el-row :gutter="10">
@@ -651,8 +661,12 @@ onMounted(() => {
 
       <template #footer>
         <div style="padding: 0 20px 20px">
-          <el-button @click="closeDrawer">取消</el-button>
-          <el-button type="primary" :loading="drawerLoading" @click="submitForm">提交</el-button>
+          <el-button @click="closeDrawer">
+            取消
+          </el-button>
+          <el-button type="primary" :loading="drawerLoading" @click="submitForm">
+            提交
+          </el-button>
         </div>
       </template>
     </el-drawer>

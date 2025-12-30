@@ -16,8 +16,6 @@ const {
   selectedId,
   activeElement,
   stageSize,
-  addRect,
-  addCircle,
   addText,
   addImage,
   deleteSelected,
@@ -154,8 +152,6 @@ const layerElements = computed(() => {
           <el-tab-pane label="素材库" name="materials">
             <ElementToolbar
               :has-selection="!!selectedId"
-              @add-rect="addRect"
-              @add-circle="addCircle"
               @add-text="addText"
               @add-image="addImage"
               @delete-selected="deleteSelected"

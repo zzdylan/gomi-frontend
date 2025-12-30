@@ -121,36 +121,6 @@ function updateTimeline(key: "startTime" | "duration", value: number) {
             />
           </el-form-item>
 
-          <el-form-item v-if="element.type === 'rect'" label="宽度">
-            <el-input-number
-              :model-value="element.width"
-              :step="1"
-              :min="1"
-              size="small"
-              @update:model-value="updateProp('width', $event!)"
-            />
-          </el-form-item>
-
-          <el-form-item v-if="element.type === 'rect'" label="高度">
-            <el-input-number
-              :model-value="element.height"
-              :step="1"
-              :min="1"
-              size="small"
-              @update:model-value="updateProp('height', $event!)"
-            />
-          </el-form-item>
-
-          <el-form-item v-if="element.type === 'circle'" label="直径">
-            <el-input-number
-              :model-value="(element.radius || 0) * 2"
-              :step="1"
-              :min="1"
-              size="small"
-              @update:model-value="updateProp('radius', $event! / 2)"
-            />
-          </el-form-item>
-
           <el-form-item v-if="element.type === 'text'" label="宽度">
             <el-input-number
               :model-value="element.width"
@@ -258,6 +228,24 @@ function updateTimeline(key: "startTime" | "duration", value: number) {
               <el-option label="Times New Roman" value="Times New Roman, serif" />
               <el-option label="Courier New" value="Courier New, monospace" />
             </el-select>
+          </el-form-item>
+
+          <el-form-item label="描边颜色">
+            <el-color-picker
+              :model-value="element.stroke || '#000000'"
+              @update:model-value="updateProp('stroke', $event!)"
+            />
+          </el-form-item>
+
+          <el-form-item label="描边宽度">
+            <el-input-number
+              :model-value="element.strokeWidth || 0"
+              :step="1"
+              :min="0"
+              :max="20"
+              size="small"
+              @update:model-value="updateProp('strokeWidth', $event!)"
+            />
           </el-form-item>
         </el-form>
       </div>
@@ -416,40 +404,6 @@ function updateTimeline(key: "startTime" | "duration", value: number) {
               :precision="1"
             />
             <span style="margin-left: 8px">秒</span>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 填充颜色（矩形、圆形） -->
-      <div v-if="element.type === 'rect' || element.type === 'circle'" class="property-section">
-        <div class="section-title">
-          样式属性
-        </div>
-
-        <el-form label-width="60px" size="small">
-          <el-form-item label="填充">
-            <el-color-picker
-              :model-value="element.fill"
-              @update:model-value="updateProp('fill', $event!)"
-            />
-          </el-form-item>
-
-          <el-form-item label="边框">
-            <el-color-picker
-              :model-value="element.stroke"
-              @update:model-value="updateProp('stroke', $event!)"
-            />
-          </el-form-item>
-
-          <el-form-item label="边框宽">
-            <el-input-number
-              :model-value="element.strokeWidth"
-              :step="1"
-              :min="0"
-              :max="20"
-              size="small"
-              @update:model-value="updateProp('strokeWidth', $event!)"
-            />
           </el-form-item>
         </el-form>
       </div>

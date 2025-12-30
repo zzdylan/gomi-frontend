@@ -1,18 +1,38 @@
+<script setup lang="ts">
+import type { UploadRawFile } from "element-plus"
+import { Delete, Document, Download, EditPen, Picture, RefreshLeft } from "@element-plus/icons-vue"
+
+defineProps<{
+  hasSelection: boolean
+}>()
+
+const emit = defineEmits<{
+  addText: []
+  addImage: [url: string]
+  deleteSelected: []
+  clearCanvas: []
+  exportJSON: []
+  exportImage: []
+}>()
+
+function handleImageUpload(file: UploadRawFile) {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const url = e.target?.result as string
+    emit("addImage", url)
+  }
+  reader.readAsDataURL(file)
+  return false // 阻止自动上传
+}
+</script>
+
 <template>
   <div class="element-toolbar">
-    <div class="toolbar-title">添加元素</div>
+    <div class="toolbar-title">
+      添加元素
+    </div>
 
     <div class="toolbar-buttons">
-      <el-button type="primary" @click="$emit('addRect')">
-        <el-icon><Grid /></el-icon>
-        矩形
-      </el-button>
-
-      <el-button type="success" @click="$emit('addCircle')">
-        <el-icon><Sunny /></el-icon>
-        圆形
-      </el-button>
-
       <el-button type="info" @click="$emit('addText')">
         <el-icon><EditPen /></el-icon>
         文本
@@ -32,7 +52,9 @@
 
     <el-divider />
 
-    <div class="toolbar-title">操作</div>
+    <div class="toolbar-title">
+      操作
+    </div>
     <div class="toolbar-buttons">
       <el-button @click="$emit('deleteSelected')" :disabled="!hasSelection">
         <el-icon><Delete /></el-icon>
@@ -56,7 +78,9 @@
 
     <el-divider />
 
-    <div class="toolbar-title">导出</div>
+    <div class="toolbar-title">
+      导出
+    </div>
     <div class="toolbar-buttons">
       <el-button @click="$emit('exportJSON')">
         <el-icon><Document /></el-icon>
@@ -70,36 +94,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { Delete, Document, Download, EditPen, Grid, Picture, RefreshLeft, Sunny } from "@element-plus/icons-vue"
-import type { UploadRawFile } from "element-plus"
-
-defineProps<{
-  hasSelection: boolean
-}>()
-
-const emit = defineEmits<{
-  addRect: []
-  addCircle: []
-  addText: []
-  addImage: [url: string]
-  deleteSelected: []
-  clearCanvas: []
-  exportJSON: []
-  exportImage: []
-}>()
-
-const handleImageUpload = (file: UploadRawFile) => {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const url = e.target?.result as string
-    emit("addImage", url)
-  }
-  reader.readAsDataURL(file)
-  return false // 阻止自动上传
-}
-</script>
 
 <style scoped lang="scss">
 .element-toolbar {

@@ -2,7 +2,6 @@
 import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps } from "vxe-table"
 import { batchDeleteBenefitApi, createBenefitApi, deleteBenefitApi, getBenefitListApi, updateBenefitApi } from "./apis"
-import type { BenefitInfo } from "./apis/type"
 
 defineOptions({
   name: "BenefitManagement"
@@ -14,11 +13,11 @@ const BENEFIT_STATUS_OPTIONS = [
   { label: "启用", value: 1 }
 ]
 
-const getBenefitStatusLabel = (status: number) => {
-  return BENEFIT_STATUS_OPTIONS.find((item) => item.value === status)?.label || "未知"
+function getBenefitStatusLabel(status: number) {
+  return BENEFIT_STATUS_OPTIONS.find(item => item.value === status)?.label || "未知"
 }
 
-const getBenefitStatusType = (status: number) => {
+function getBenefitStatusType(status: number) {
   return status === 1 ? "success" : "info"
 }
 // #endregion
@@ -272,14 +271,14 @@ const xFormOpt = reactive<VxeFormProps>({
     name: [{ required: true, message: "请输入权益名称" }],
     code: [
       { required: true, message: "请输入权益编码" },
-      { pattern: /^[a-zA-Z0-9_-]+$/, message: "只能包含字母、数字、下划线和破折号" }
+      { pattern: /^[\w-]+$/, message: "只能包含字母、数字、下划线和破折号" }
     ],
     unit_name: [{ required: true, message: "请输入单位名称" }]
   },
   data: formData
 })
 
-const resetForm = () => {
+function resetForm() {
   Object.assign(formData, {
     name: "",
     code: "",
@@ -288,7 +287,7 @@ const resetForm = () => {
   })
 }
 
-const openDrawer = (type: "create" | "update", row?: RowMeta) => {
+function openDrawer(type: "create" | "update", row?: RowMeta) {
   currentFormType.value = type
   if (type === "create") {
     drawerTitle.value = "新增权益类型"
@@ -306,12 +305,12 @@ const openDrawer = (type: "create" | "update", row?: RowMeta) => {
   drawerVisible.value = true
 }
 
-const closeDrawer = () => {
+function closeDrawer() {
   drawerVisible.value = false
   resetForm()
 }
 
-const submitForm = async () => {
+async function submitForm() {
   const $form = xFormDom.value
   if (!$form) return
 
@@ -343,15 +342,15 @@ const submitForm = async () => {
 // #endregion
 
 // #region 操作
-const handleCreate = () => {
+function handleCreate() {
   openDrawer("create")
 }
 
-const handleUpdate = (row: RowMeta) => {
+function handleUpdate(row: RowMeta) {
   openDrawer("update", row)
 }
 
-const handleDelete = (row: RowMeta) => {
+function handleDelete(row: RowMeta) {
   const options: ElMessageBoxOptions = {
     title: "删除确认",
     message: h("p", null, [
@@ -375,7 +374,7 @@ const handleDelete = (row: RowMeta) => {
     })
 }
 
-const handleBatchDelete = () => {
+function handleBatchDelete() {
   const $grid = xGridDom.value
   if (!$grid) return
 
@@ -395,7 +394,7 @@ const handleBatchDelete = () => {
 
   ElMessageBox.confirm(options.message!, options.title, options)
     .then(async () => {
-      const ids = selectRecords.map((item) => item.id)
+      const ids = selectRecords.map(item => item.id)
       await batchDeleteBenefitApi({ ids })
       ElMessage.success("删除成功")
       xGridDom.value?.commitProxy("query")
@@ -417,8 +416,12 @@ onMounted(() => {
     <vxe-grid ref="xGridDom" v-bind="xGridOpt">
       <!-- 工具栏 -->
       <template #toolbar-btns>
-        <vxe-button status="primary" icon="vxe-icon-add" @click="handleCreate">新增</vxe-button>
-        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleBatchDelete">批量删除</vxe-button>
+        <vxe-button status="primary" icon="vxe-icon-add" @click="handleCreate">
+          新增
+        </vxe-button>
+        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleBatchDelete">
+          批量删除
+        </vxe-button>
       </template>
 
       <!-- 状态插槽 -->
@@ -430,8 +433,12 @@ onMounted(() => {
 
       <!-- 操作插槽 -->
       <template #action-slot="{ row }">
-        <vxe-button status="primary" icon="vxe-icon-edit" @click="handleUpdate(row)">编辑</vxe-button>
-        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleDelete(row)">删除</vxe-button>
+        <vxe-button status="primary" icon="vxe-icon-edit" @click="handleUpdate(row)">
+          编辑
+        </vxe-button>
+        <vxe-button status="danger" icon="vxe-icon-delete" @click="handleDelete(row)">
+          删除
+        </vxe-button>
       </template>
     </vxe-grid>
 
@@ -441,8 +448,12 @@ onMounted(() => {
 
       <template #footer>
         <div style="padding: 0 20px 20px">
-          <el-button @click="closeDrawer">取消</el-button>
-          <el-button type="primary" :loading="drawerLoading" @click="submitForm">提交</el-button>
+          <el-button @click="closeDrawer">
+            取消
+          </el-button>
+          <el-button type="primary" :loading="drawerLoading" @click="submitForm">
+            提交
+          </el-button>
         </div>
       </template>
     </el-drawer>

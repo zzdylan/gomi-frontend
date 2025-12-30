@@ -21,19 +21,15 @@ export interface TextEffect {
 
 export interface KonvaElement {
   id: string
-  type: "rect" | "circle" | "text" | "image"
+  type: "text" | "image"
   name: string
   x: number
   y: number
   rotation: number
   opacity: number
-  // 矩形/圆形属性
+  // 尺寸属性
   width?: number
   height?: number
-  radius?: number
-  fill?: string
-  stroke?: string
-  strokeWidth?: number
   // 文本属性
   text?: string
   fontSize?: number
@@ -41,6 +37,9 @@ export interface KonvaElement {
   fontFamily?: string // 新增：字体家族
   textAlign?: string
   textEffect?: TextEffect // 新增：文字特效
+  fill?: string
+  stroke?: string
+  strokeWidth?: number
   // 图片属性
   imageUrl?: string
   scaleX?: number
@@ -71,45 +70,6 @@ export function useKonva() {
     return elements.value.find(el => el.id === selectedId.value) || null
   })
 
-  // 添加矩形
-  const addRect = () => {
-    const id = `rect-${Date.now()}`
-    elements.value.push({
-      id,
-      type: "rect",
-      name: "矩形",
-      x: 100,
-      y: 100,
-      width: 100,
-      height: 100,
-      rotation: 0,
-      opacity: 1,
-      fill: "#3b82f6",
-      stroke: "#1e40af",
-      strokeWidth: 2
-    })
-    selectedId.value = id
-  }
-
-  // 添加圆形
-  const addCircle = () => {
-    const id = `circle-${Date.now()}`
-    elements.value.push({
-      id,
-      type: "circle",
-      name: "圆形",
-      x: 200,
-      y: 200,
-      radius: 50,
-      rotation: 0,
-      opacity: 1,
-      fill: "#10b981",
-      stroke: "#059669",
-      strokeWidth: 2
-    })
-    selectedId.value = id
-  }
-
   // 添加文本
   const addText = (text: string = "双击编辑文本") => {
     const id = `text-${Date.now()}`
@@ -125,6 +85,8 @@ export function useKonva() {
       text,
       fontSize: 24,
       fill: "#1f2937",
+      stroke: "#000000",
+      strokeWidth: 0,
       fontWeight: "normal",
       fontFamily: "Arial",
       textAlign: "left",
@@ -240,8 +202,6 @@ export function useKonva() {
     selectedId,
     activeElement,
     stageSize,
-    addRect,
-    addCircle,
     addText,
     addImage,
     deleteSelected,

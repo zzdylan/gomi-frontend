@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Delete, EditPen, Grid, Picture, Rank, Sunny } from "@element-plus/icons-vue"
+import { Delete, EditPen, Picture, Rank } from "@element-plus/icons-vue"
 import { VueDraggable } from "vue-draggable-plus"
 
 // 图层面板只需要这些基本信息
 interface LayerItem {
   id: string
-  type: "rect" | "circle" | "text" | "image"
+  type: "text" | "image"
   name: string
   [key: string]: any // 允许其他属性
 }
@@ -50,10 +50,8 @@ function getLayerDisplayName(element: LayerItem) {
     const imageUrl = (element as any).imageUrl || ""
     const fileName = imageUrl.split("/").pop() || "图片"
     return fileName.length > 20 ? `${fileName.substring(0, 20)}...` : fileName
-  } else {
-    // 矩形和圆形显示默认名称
-    return element.name
   }
+  return element.name
 }
 </script>
 
@@ -88,9 +86,7 @@ function getLayerDisplayName(element: LayerItem) {
               <Rank />
             </el-icon>
             <el-icon class="layer-icon">
-              <Grid v-if="element.type === 'rect'" />
-              <Sunny v-else-if="element.type === 'circle'" />
-              <EditPen v-else-if="element.type === 'text'" />
+              <EditPen v-if="element.type === 'text'" />
               <Picture v-else-if="element.type === 'image'" />
             </el-icon>
             <span class="layer-name">{{ getLayerDisplayName(element) }}</span>

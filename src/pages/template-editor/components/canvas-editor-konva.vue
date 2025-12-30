@@ -147,20 +147,7 @@ function handleTransformEnd(id: string, e: any) {
 
   const element = props.elements.find(el => el.id === id)
 
-  if (element?.type === "rect") {
-    // 对于矩形，将缩放应用到宽高，然后重置 scale
-    updates.width = Math.max(5, node.width() * scaleX)
-    updates.height = Math.max(5, node.height() * scaleY)
-    // 立即重置节点的 scale，避免跳变
-    node.scaleX(1)
-    node.scaleY(1)
-  } else if (element?.type === "circle") {
-    // 对于圆形，将缩放应用到半径
-    updates.radius = Math.max(5, (element.radius || 50) * scaleX)
-    // 立即重置节点的 scale，避免跳变
-    node.scaleX(1)
-    node.scaleY(1)
-  } else if (element?.type === "text") {
+  if (element?.type === "text") {
     // 对于文本，调整宽度和字号
     updates.width = Math.max(20, node.width() * scaleX)
     updates.fontSize = Math.max(12, (element.fontSize || 24) * scaleY)
@@ -261,50 +248,9 @@ defineExpose({
 
         <!-- 渲染所有元素 - 核心：必须设置 id 属性用于 Transformer 查找 -->
         <template v-for="element in elements" :key="`el-${element.id}`">
-          <!-- 矩形 -->
-          <v-rect
-            v-if="element.type === 'rect'"
-            :config="{
-              id: element.id,
-              name: element.id,
-              x: element.x,
-              y: element.y,
-              width: element.width,
-              height: element.height,
-              fill: element.fill,
-              stroke: element.stroke,
-              strokeWidth: element.strokeWidth,
-              rotation: element.rotation,
-              opacity: element.opacity,
-              draggable: true,
-            }"
-            @dragend="handleDragEnd(element.id, $event)"
-            @transformend="handleTransformEnd(element.id, $event)"
-          />
-
-          <!-- 圆形 -->
-          <v-circle
-            v-else-if="element.type === 'circle'"
-            :config="{
-              id: element.id,
-              name: element.id,
-              x: element.x,
-              y: element.y,
-              radius: element.radius,
-              fill: element.fill,
-              stroke: element.stroke,
-              strokeWidth: element.strokeWidth,
-              rotation: element.rotation,
-              opacity: element.opacity,
-              draggable: true,
-            }"
-            @dragend="handleDragEnd(element.id, $event)"
-            @transformend="handleTransformEnd(element.id, $event)"
-          />
-
           <!-- 文本 -->
           <v-text
-            v-else-if="element.type === 'text'"
+            v-if="element.type === 'text'"
             :key="`text-${element.id}-${element.fontFamily}`"
             :config="{
               id: element.id,
@@ -315,6 +261,8 @@ defineExpose({
               fontSize: element.fontSize,
               fontFamily: element.fontFamily || 'Arial',
               fill: element.fill,
+              stroke: element.stroke,
+              strokeWidth: element.strokeWidth,
               width: element.width,
               align: element.textAlign,
               fontStyle: element.fontWeight,
