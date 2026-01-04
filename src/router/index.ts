@@ -113,6 +113,27 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/material",
+    component: Layouts,
+    name: "Material",
+    meta: {
+      title: "素材库",
+      elIcon: "Picture",
+      alwaysShow: true
+    },
+    children: [
+      {
+        path: "index",
+        component: () => import("@/pages/material/index.vue"),
+        name: "MaterialLibrary",
+        meta: {
+          title: "素材管理",
+          keepAlive: true
+        }
+      }
+    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {
