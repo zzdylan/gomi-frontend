@@ -463,6 +463,10 @@ onMounted(() => {
             <el-option label="图片" value="image" />
             <el-option label="视频" value="video" />
           </el-select>
+          <el-button @click="loadMaterials">
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
           <span class="selected-count">已选择: {{ selectedMaterials.length }} 个</span>
         </div>
       </div>
