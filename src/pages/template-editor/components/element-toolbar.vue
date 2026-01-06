@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { UploadRawFile } from "element-plus"
-import { Delete, Document, Download, EditPen, Picture, RefreshLeft } from "@element-plus/icons-vue"
+import { Delete, Document, Download, EditPen, FolderOpened, RefreshLeft } from "@element-plus/icons-vue"
+import MaterialSelector from "./material-selector.vue"
 
 defineProps<{
   hasSelection: boolean
@@ -15,14 +15,15 @@ const emit = defineEmits<{
   exportImage: []
 }>()
 
-function handleImageUpload(file: UploadRawFile) {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const url = e.target?.result as string
-    emit("addImage", url)
-  }
-  reader.readAsDataURL(file)
-  return false // 阻止自动上传
+const materialSelectorVisible = ref(false)
+
+function showMaterialSelector() {
+  materialSelectorVisible.value = true
+}
+
+function handleMaterialSelect(url: string) {
+  emit("addImage", url)
+  materialSelectorVisible.value = false
 }
 </script>
 
@@ -38,16 +39,10 @@ function handleImageUpload(file: UploadRawFile) {
         文本
       </el-button>
 
-      <el-upload
-        :show-file-list="false"
-        :before-upload="handleImageUpload"
-        accept="image/*"
-      >
-        <el-button type="warning">
-          <el-icon><Picture /></el-icon>
-          图片
-        </el-button>
-      </el-upload>
+      <el-button type="success" @click="showMaterialSelector">
+        <el-icon><FolderOpened /></el-icon>
+        素材库
+      </el-button>
     </div>
 
     <el-divider />
@@ -92,6 +87,19 @@ function handleImageUpload(file: UploadRawFile) {
         图片
       </el-button>
     </div>
+
+    <!-- 素材选择器对话框 -->
+    <el-dialog
+      v-model="materialSelectorVisible"
+      title="选择素材"
+      width="900px"
+      :close-on-click-modal="false"
+    >
+      <MaterialSelector
+        @select="handleMaterialSelect"
+        @close="materialSelectorVisible = false"
+      />
+    </el-dialog>
   </div>
 </template>
 

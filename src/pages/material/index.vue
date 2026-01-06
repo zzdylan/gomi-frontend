@@ -1,16 +1,15 @@
 <script lang="ts" setup>
-import type { UploadFile, UploadFiles, UploadInstance } from "element-plus"
 import type { MaterialFolderItem, MaterialItem, MaterialType } from "./apis/type"
+import { Back, Check, Delete, Edit, Folder, FolderOpened, Plus, Refresh, Right, Upload } from "@element-plus/icons-vue"
+import MaterialUpload from "@/components/MaterialUpload.vue"
 import {
   batchDeleteMaterialApi,
-  batchUploadMaterialApi,
   createMaterialFolderApi,
   deleteMaterialFolderApi,
   getMaterialFolderListApi,
   getMaterialListApi,
   moveMaterialApi,
-  updateMaterialFolderApi,
-  uploadMaterialApi
+  updateMaterialFolderApi
 } from "./apis"
 
 defineOptions({
@@ -190,86 +189,10 @@ function handleTypeChange() {
 }
 
 // 上传素材
-const uploadRef = useTemplateRef<UploadInstance>("uploadRef")
 const uploadDialogVisible = ref(false)
-const uploadFileList = ref<UploadFiles>([])
-const uploadProgress = ref(0)
-const isUploading = ref(false)
-const uploadStatus = ref("")
 
-function handleUploadChange(file: UploadFile, files: UploadFiles) {
-  uploadFileList.value = files
-}
-
-function handleUploadRemove(file: UploadFile) {
-  uploadFileList.value = uploadFileList.value.filter(f => f.uid !== file.uid)
-}
-
-async function handleUploadSubmit() {
-  if (uploadFileList.value.length === 0) {
-    ElMessage.warning("请选择要上传的文件")
-    return
-  }
-
-  isUploading.value = true
-  uploadProgress.value = 0
-  uploadStatus.value = "上传中..."
-
-  const formData = new FormData()
-
-  if (uploadFileList.value.length === 1) {
-    // 单文件上传
-    formData.append("file", uploadFileList.value[0].raw as File)
-    formData.append("folder_id", currentFolderId.value.toString())
-
-    try {
-      await uploadMaterialApi(formData, (progressEvent) => {
-        if (progressEvent.total) {
-          const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100)
-          uploadProgress.value = percent
-          uploadStatus.value = percent >= 100 ? "处理中..." : `上传中... ${percent}%`
-        }
-      })
-      ElMessage.success("上传成功")
-      uploadDialogVisible.value = false
-      uploadFileList.value = []
-      uploadProgress.value = 0
-      uploadStatus.value = ""
-      loadMaterials()
-    } catch (error) {
-      console.error("上传失败:", error)
-      uploadStatus.value = "上传失败"
-    } finally {
-      isUploading.value = false
-    }
-  } else {
-    // 批量上传
-    uploadFileList.value.forEach((file) => {
-      formData.append("files", file.raw as File)
-    })
-    formData.append("folder_id", currentFolderId.value.toString())
-
-    try {
-      const { data } = await batchUploadMaterialApi(formData, (progressEvent) => {
-        if (progressEvent.total) {
-          const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100)
-          uploadProgress.value = percent
-          uploadStatus.value = percent >= 100 ? "处理中..." : `上传中... ${percent}%`
-        }
-      })
-      ElMessage.success(`批量上传完成：成功 ${data.success_count} 个，失败 ${data.failed_count} 个`)
-      uploadDialogVisible.value = false
-      uploadFileList.value = []
-      uploadProgress.value = 0
-      uploadStatus.value = ""
-      loadMaterials()
-    } catch (error) {
-      console.error("批量上传失败:", error)
-      uploadStatus.value = "上传失败"
-    } finally {
-      isUploading.value = false
-    }
-  }
+function handleUploadSuccess() {
+  loadMaterials()
 }
 
 // 预览素材
@@ -542,51 +465,11 @@ onMounted(() => {
     </el-dialog>
 
     <!-- 上传对话框 -->
-    <el-dialog v-model="uploadDialogVisible" title="上传素材" width="500px" :close-on-click-modal="!isUploading">
-      <el-upload
-        ref="uploadRef"
-        :auto-upload="false"
-        :file-list="uploadFileList"
-        :disabled="isUploading"
-        accept="image/*,video/*"
-        multiple
-        drag
-        @change="handleUploadChange"
-        @remove="handleUploadRemove"
-      >
-        <el-icon class="el-icon--upload">
-          <upload-filled />
-        </el-icon>
-        <div class="el-upload__text">
-          将文件拖到此处，或<em>点击上传</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            支持图片和视频文件，可多选
-          </div>
-        </template>
-      </el-upload>
-
-      <!-- 上传进度条 -->
-      <div v-if="isUploading" style="margin-top: 16px;">
-        <div style="margin-bottom: 8px; color: #606266; font-size: 14px;">
-          {{ uploadStatus }}
-        </div>
-        <el-progress
-          :percentage="uploadProgress"
-          :status="uploadProgress === 100 ? undefined : undefined"
-        />
-      </div>
-
-      <template #footer>
-        <el-button @click="uploadDialogVisible = false" :disabled="isUploading">
-          取消
-        </el-button>
-        <el-button type="primary" @click="handleUploadSubmit" :loading="isUploading">
-          {{ isUploading ? uploadStatus : '确定上传' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <MaterialUpload
+      v-model:visible="uploadDialogVisible"
+      :folder-id="currentFolderId"
+      @success="handleUploadSuccess"
+    />
 
     <!-- 移动对话框 -->
     <el-dialog v-model="moveDialogVisible" title="移动到文件夹" width="400px">

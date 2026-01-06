@@ -96,20 +96,31 @@ export const constantRoutes: RouteRecordRaw[] = [
   {
     path: "/template",
     component: Layouts,
-    redirect: "/template/editor-konva",
+    redirect: "/template/manage",
     name: "Template",
     meta: {
       title: "模板管理",
-      elIcon: "Document"
+      elIcon: "Document",
+      alwaysShow: true
     },
     children: [
+      {
+        path: "manage",
+        component: () => import("@/pages/template-manage/index.vue"),
+        name: "TemplateManage",
+        meta: {
+          title: "模板列表",
+          keepAlive: true
+        }
+      },
       {
         path: "editor-konva",
         component: () => import("@/pages/template-editor/index-konva.vue"),
         name: "TemplateEditorKonva",
         meta: {
           title: "模板编辑器",
-          keepAlive: true
+          keepAlive: true,
+          hidden: true
         }
       }
     ]
@@ -134,6 +145,15 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: "/template-editor",
+    component: () => import("@/pages/template-editor/index-konva.vue"),
+    name: "TemplateEditor",
+    meta: {
+      title: "模板编辑器",
+      hidden: true
+    }
   }
   // 示例路由 - 已注释，可作为参考
   // {

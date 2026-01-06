@@ -111,6 +111,7 @@ export function useKonva() {
   const addImage = (url: string) => {
     const id = `image-${Date.now()}`
     const img = new Image()
+    // img.crossOrigin = "anonymous" // 注释掉，避免阿里云 OSS CORS 问题
     img.onload = () => {
       elements.value.push({
         id,
@@ -124,9 +125,25 @@ export function useKonva() {
         opacity: 1,
         imageUrl: url,
         scaleX: 0.5,
-        scaleY: 0.5
+        scaleY: 0.5,
+        // 默认时间轴配置
+        timeline: {
+          startTime: 0,
+          duration: 3,
+          endTime: 3
+        },
+        // 默认动画配置
+        animation: {
+          in: "fade",
+          out: "fade",
+          inDuration: 0.5,
+          outDuration: 0.5
+        }
       })
       selectedId.value = id
+    }
+    img.onerror = (e) => {
+      console.error("图片加载失败:", url, e)
     }
     img.src = url
   }

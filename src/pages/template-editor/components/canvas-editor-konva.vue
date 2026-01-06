@@ -20,20 +20,63 @@ const editingTextId = ref<string | null>(null)
 // 图片缓存：存储已加载的图片对象
 const imageCache = ref<Map<string, HTMLImageElement>>(new Map())
 
-// 加载图片
+// 判断图片是否跨域
+function isCrossOrigin(url: string): boolean {
+  try {
+    const imageUrl = new URL(url, window.location.href)
+    return imageUrl.origin !== window.location.origin
+  } catch {
+    return false
+  }
+}
+
+// 加载图片（显示用，不设置 crossOrigin）
 function loadImage(url: string): HTMLImageElement | undefined {
   if (imageCache.value.has(url)) {
     return imageCache.value.get(url)
   }
 
   const img = new Image()
-  img.crossOrigin = "anonymous" // 处理跨域问题
+  // 不设置 crossOrigin，保证图片能正常显示
+  // 缺点：Canvas 被污染，无法直接导出
+  // 解决：导出时重新用 CORS 模式加载
+
   img.onload = () => {
     imageCache.value.set(url, img)
+    // 图片加载完成后，强制触发更新
+    nextTick(() => {
+      if (stageRef.value) {
+        stageRef.value.getNode().batchDraw()
+      }
+    })
   }
+
+  img.onerror = (e) => {
+    console.error("图片加载失败:", url, e)
+  }
+
   img.src = url
 
   return undefined
+}
+
+// 用 CORS 模式加载图片（导出用）
+function loadImageWithCORS(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+
+    img.onload = () => {
+      resolve(img)
+    }
+
+    img.onerror = (_e) => {
+      console.error("CORS 模式加载图片失败:", url)
+      reject(new Error(`CORS 模式加载图片失败: ${url}`))
+    }
+
+    img.src = url
+  })
 }
 
 // 获取图片元素的 config，包含加载的图片对象
@@ -209,13 +252,110 @@ function finishTextEdit() {
   })
 }
 
-// 导出舞台为图片
-function exportToDataURL() {
+// 导出舞台为图片（使用 CORS 模式重新加载图片）
+async function exportToDataURL(): Promise<string | null> {
   if (!stageRef.value) return null
-  const stage = stageRef.value.getNode()
-  return stage.toDataURL({
-    pixelRatio: 2
-  })
+
+  try {
+    // 1. 收集所有跨域图片 URL
+    const crossOriginImageUrls = new Set<string>()
+    props.elements.forEach((el) => {
+      if (el.type === "image" && el.imageUrl && isCrossOrigin(el.imageUrl)) {
+        crossOriginImageUrls.add(el.imageUrl)
+      }
+    })
+
+    // 2. 如果没有跨域图片，直接导出
+    if (crossOriginImageUrls.size === 0) {
+      const stage = stageRef.value.getNode()
+      return stage.toDataURL({ pixelRatio: 2 })
+    }
+
+    // 3. 用 CORS 模式重新加载所有跨域图片
+    const corsImageMap = new Map<string, HTMLImageElement>()
+
+    try {
+      await Promise.all(
+        Array.from(crossOriginImageUrls).map(async (url) => {
+          const img = await loadImageWithCORS(url)
+          corsImageMap.set(url, img)
+        })
+      )
+    } catch (corsError) {
+      console.error("缩略图导出失败:", corsError)
+      return null
+    }
+
+    // 4. 创建临时 Stage 用于导出
+    const Konva = (await import("konva")).default
+    const tempStage = new Konva.Stage({
+      container: document.createElement("div"),
+      width: props.stageSize.width,
+      height: props.stageSize.height
+    })
+
+    const tempLayer = new Konva.Layer()
+    tempStage.add(tempLayer)
+
+    // 5. 添加白色背景
+    const background = new Konva.Rect({
+      x: 0,
+      y: 0,
+      width: props.stageSize.width,
+      height: props.stageSize.height,
+      fill: "white"
+    })
+    tempLayer.add(background)
+
+    // 6. 重新绘制所有元素（使用 CORS 加载的图片）
+    props.elements.forEach((el) => {
+      if (el.type === "text") {
+        const text = new Konva.Text({
+          x: el.x,
+          y: el.y,
+          text: el.text,
+          fontSize: el.fontSize,
+          fontFamily: el.fontFamily,
+          fill: el.fill,
+          align: el.textAlign,
+          width: el.width,
+          scaleX: el.scaleX,
+          scaleY: el.scaleY,
+          rotation: el.rotation,
+          opacity: el.opacity
+        })
+        tempLayer.add(text)
+      } else if (el.type === "image" && el.imageUrl) {
+        // 使用 CORS 加载的图片（如果有），否则使用缓存的图片
+        const img = corsImageMap.get(el.imageUrl) || imageCache.value.get(el.imageUrl)
+        if (img) {
+          const image = new Konva.Image({
+            x: el.x,
+            y: el.y,
+            image: img,
+            width: el.width,
+            height: el.height,
+            scaleX: el.scaleX,
+            scaleY: el.scaleY,
+            rotation: el.rotation,
+            opacity: el.opacity
+          })
+          tempLayer.add(image)
+        }
+      }
+    })
+
+    // 7. 导出临时 Stage
+    const dataURL = tempStage.toDataURL({ pixelRatio: 2 })
+
+    // 8. 清理临时 Stage
+    tempStage.destroy()
+
+    return dataURL
+  } catch (error) {
+    console.error("导出缩略图失败:", error)
+    return null
+  }
 }
 
 defineExpose({
