@@ -405,15 +405,12 @@ defineExpose({
               strokeWidth: element.strokeWidth,
               width: element.width,
               align: element.textAlign,
-              fontStyle: element.fontWeight,
+              fontStyle: `${element.fontStyle || 'normal'} ${element.fontWeight || 'normal'}`,
+              textDecoration: element.textDecoration || 'none',
               rotation: element.rotation,
               opacity: element.opacity,
               draggable: true,
               visible: editingTextId !== element.id,
-              shadowColor: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.color : undefined,
-              shadowBlur: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.blur : 0,
-              shadowOffsetX: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.offsetX : 0,
-              shadowOffsetY: element.textEffect?.shadow?.enabled ? element.textEffect.shadow.offsetY : 0,
             }"
             @dragend="handleDragEnd(element.id, $event)"
             @transformend="handleTransformEnd(element.id, $event)"

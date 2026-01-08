@@ -34,6 +34,8 @@ export interface KonvaElement {
   text?: string
   fontSize?: number
   fontWeight?: string
+  fontStyle?: string // 字体样式：normal | italic
+  textDecoration?: string // 文本装饰：none | underline
   fontFamily?: string // 新增：字体家族
   textAlign?: string
   textEffect?: TextEffect // 新增：文字特效
@@ -88,6 +90,8 @@ export function useKonva() {
       stroke: "#000000",
       strokeWidth: 0,
       fontWeight: "normal",
+      fontStyle: "normal",
+      textDecoration: "none",
       fontFamily: "Arial",
       textAlign: "left",
       // 默认时间轴配置

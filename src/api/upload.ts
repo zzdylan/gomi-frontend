@@ -1,11 +1,17 @@
 import { request } from "@/http/axios"
 
-export interface UploadResponseData {
+export interface UploadData {
   url: string
   path: string
-  mime_type: string
-  extension: string
+  mime_type?: string
+  extension?: string
   size: number
+}
+
+export interface UploadResponseData {
+  code: number
+  data: UploadData
+  message?: string
 }
 
 /**

@@ -24,24 +24,6 @@ function handleOpacityChange(value: number | number[]) {
   updateProp("opacity", opacity / 100)
 }
 
-// 更新文字特效
-function updateTextEffect(type: "shadow" | "gradient", key: string, value: any) {
-  if (!props.element) return
-
-  const currentEffect = props.element.textEffect || {}
-  const currentTypeEffect = currentEffect[type] || {}
-
-  emit("update", {
-    textEffect: {
-      ...currentEffect,
-      [type]: {
-        ...currentTypeEffect,
-        [key]: value
-      }
-    }
-  })
-}
-
 // 更新动画设置
 function updateAnimation(key: "in" | "out" | "inDuration" | "outDuration", value: any) {
   if (!props.element) return
@@ -185,14 +167,25 @@ function updateTimeline(key: "startTime" | "duration", value: number) {
             />
           </el-form-item>
 
-          <el-form-item label="粗细">
-            <el-select
-              :model-value="element.fontWeight || 'normal'"
-              @update:model-value="updateProp('fontWeight', $event)"
+          <el-form-item label="样式">
+            <el-checkbox
+              :model-value="element.fontWeight === 'bold'"
+              @update:model-value="updateProp('fontWeight', $event ? 'bold' : 'normal')"
             >
-              <el-option label="正常" value="normal" />
-              <el-option label="粗体" value="bold" />
-            </el-select>
+              <b>加粗</b>
+            </el-checkbox>
+            <el-checkbox
+              :model-value="element.fontStyle === 'italic'"
+              @update:model-value="updateProp('fontStyle', $event ? 'italic' : 'normal')"
+            >
+              <i>斜体</i>
+            </el-checkbox>
+            <el-checkbox
+              :model-value="element.textDecoration === 'underline'"
+              @update:model-value="updateProp('textDecoration', $event ? 'underline' : 'none')"
+            >
+              <u>下划线</u>
+            </el-checkbox>
           </el-form-item>
 
           <el-form-item label="对齐">
@@ -247,59 +240,6 @@ function updateTimeline(key: "startTime" | "duration", value: number) {
               @update:model-value="updateProp('strokeWidth', $event!)"
             />
           </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 文字特效（仅文本） -->
-      <div v-if="element.type === 'text'" class="property-section">
-        <div class="section-title">
-          文字特效
-        </div>
-
-        <el-form label-width="80px" size="small">
-          <!-- 阴影效果 -->
-          <el-form-item label="阴影">
-            <el-switch
-              :model-value="element.textEffect?.shadow?.enabled || false"
-              @update:model-value="updateTextEffect('shadow', 'enabled', $event)"
-            />
-          </el-form-item>
-
-          <template v-if="element.textEffect?.shadow?.enabled">
-            <el-form-item label="阴影颜色">
-              <el-color-picker
-                :model-value="element.textEffect?.shadow?.color || '#000000'"
-                @update:model-value="updateTextEffect('shadow', 'color', $event!)"
-              />
-            </el-form-item>
-
-            <el-form-item label="模糊">
-              <el-slider
-                :model-value="element.textEffect?.shadow?.blur || 0"
-                :min="0"
-                :max="20"
-                @update:model-value="updateTextEffect('shadow', 'blur', $event)"
-              />
-            </el-form-item>
-
-            <el-form-item label="X偏移">
-              <el-slider
-                :model-value="element.textEffect?.shadow?.offsetX || 0"
-                :min="-20"
-                :max="20"
-                @update:model-value="updateTextEffect('shadow', 'offsetX', $event)"
-              />
-            </el-form-item>
-
-            <el-form-item label="Y偏移">
-              <el-slider
-                :model-value="element.textEffect?.shadow?.offsetY || 0"
-                :min="-20"
-                :max="20"
-                @update:model-value="updateTextEffect('shadow', 'offsetY', $event)"
-              />
-            </el-form-item>
-          </template>
         </el-form>
       </div>
 

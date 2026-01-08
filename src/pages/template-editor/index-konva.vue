@@ -199,7 +199,7 @@ async function handleSaveConfirm() {
           `template-${Date.now()}.png`,
           "templates/thumbnails"
         )
-        thumbnailUrl = uploadData.url
+        thumbnailUrl = uploadData.data.url
       } else {
         hasTaintedCanvas = true
       }
