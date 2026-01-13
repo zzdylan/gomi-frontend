@@ -147,6 +147,47 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: "/copy-library",
+    component: Layouts,
+    name: "CopyLibrary",
+    meta: {
+      title: "文案库",
+      elIcon: "EditPen",
+      alwaysShow: true
+    },
+    children: [
+      {
+        path: "index",
+        component: () => import("@/pages/copy-library/index.vue"),
+        name: "CopyLibraryList",
+        meta: {
+          title: "文案库管理",
+          keepAlive: true
+        }
+      },
+      {
+        path: "combine",
+        component: () => import("@/pages/copy-library/combine.vue"),
+        name: "CopyLibraryCombine",
+        meta: {
+          title: "组合文案",
+          keepAlive: true,
+          hidden: true
+        }
+      },
+      {
+        path: "smart",
+        component: () => import("@/pages/copy-library/smart.vue"),
+        name: "CopyLibrarySmart",
+        meta: {
+          title: "智能文案",
+          keepAlive: true,
+          hidden: true
+        }
+      }
+    ]
+  },
+  {
     path: "/template-editor",
     component: () => import("@/pages/template-editor/index-konva.vue"),
     name: "TemplateEditor",
