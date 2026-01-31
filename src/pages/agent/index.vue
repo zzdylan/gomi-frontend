@@ -48,6 +48,12 @@ function formatBalance(balance: number) {
 // #region vxe-grid
 interface RowMeta {
   id: string
+  user_id: string
+  user?: {
+    id: string
+    username: string
+    name?: string
+  }
   type: number
   parent_id: string
   company_name: string
@@ -262,6 +268,10 @@ const currentRowId = ref("")
 const xFormDom = useTemplateRef<VxeFormInstance>("xFormDom")
 
 interface FormData {
+  // 账号信息（仅新增时）
+  username?: string
+  password?: string
+  // 代理商信息
   type: number
   parent_id?: string
   company_name: string
@@ -275,6 +285,8 @@ interface FormData {
 }
 
 const formData = reactive<FormData>({
+  username: "",
+  password: "",
   type: 2,
   company_name: "",
   contact_name: "",
@@ -290,6 +302,45 @@ const xFormOpt = reactive<VxeFormProps>({
   titleWidth: "100px",
   titleAlign: "right",
   items: [
+    // 账号信息（新增时可编辑，编辑时只读展示）
+    {
+      field: "username",
+      title: "用户名",
+      span: 24,
+      itemRender: {
+        name: "VxeInput",
+        props: {
+          placeholder: "请输入登录用户名"
+        }
+      },
+      visibleMethod: () => currentFormType.value === "create"
+    },
+    {
+      field: "username",
+      title: "登录账号",
+      span: 24,
+      itemRender: {
+        name: "VxeInput",
+        props: {
+          disabled: true
+        }
+      },
+      visibleMethod: () => currentFormType.value === "update"
+    },
+    {
+      field: "password",
+      title: "密码",
+      span: 24,
+      itemRender: {
+        name: "VxeInput",
+        props: {
+          type: "password",
+          placeholder: "请输入登录密码"
+        }
+      },
+      visibleMethod: () => currentFormType.value === "create"
+    },
+    // 代理商信息
     {
       field: "type",
       title: "代理类型",
@@ -393,27 +444,17 @@ const xFormOpt = reactive<VxeFormProps>({
           rows: 3
         }
       }
-    },
-    {
-      align: "right",
-      span: 24,
-      itemRender: {
-        name: "VxeButtonGroup",
-        options: [
-          {
-            type: "submit",
-            content: "提交",
-            status: "primary"
-          },
-          {
-            type: "reset",
-            content: "重置"
-          }
-        ]
-      }
     }
   ],
   rules: {
+    username: [
+      { required: true, message: "请输入用户名" },
+      { min: 3, max: 50, message: "用户名长度需在 3~50 之间" }
+    ],
+    password: [
+      { required: true, message: "请输入密码" },
+      { min: 6, max: 50, message: "密码长度需在 6~50 之间" }
+    ],
     type: [{ required: true, message: "请选择代理类型" }],
     company_name: [{ required: true, message: "请输入公司名称" }],
     contact_name: [{ required: true, message: "请输入联系人姓名" }],
@@ -427,6 +468,8 @@ const xFormOpt = reactive<VxeFormProps>({
 
 function resetForm() {
   Object.assign(formData, {
+    username: "",
+    password: "",
     type: 2,
     parent_id: "",
     company_name: "",
@@ -449,6 +492,7 @@ function openDrawer(type: "create" | "update", row?: RowMeta) {
     drawerTitle.value = "编辑代理商"
     currentRowId.value = row.id
     Object.assign(formData, {
+      username: row.user?.username || "", // 展示关联的用户名
       type: row.type,
       parent_id: row.parent_id,
       company_name: row.company_name,
@@ -481,15 +525,37 @@ async function submitForm() {
   drawerLoading.value = true
 
   try {
-    const submitData = {
-      ...formData,
-      balance: formData.balance ? Math.round(formData.balance * 100) : 0 // 元转分
-    }
-
     if (currentFormType.value === "create") {
+      // 新增时提交账号信息
+      const submitData = {
+        username: formData.username,
+        password: formData.password,
+        type: formData.type,
+        parent_id: formData.parent_id ? Number(formData.parent_id) : undefined,
+        company_name: formData.company_name,
+        contact_name: formData.contact_name,
+        contact_phone: formData.contact_phone,
+        contact_email: formData.contact_email,
+        address: formData.address,
+        balance: formData.balance ? Math.round(formData.balance * 100) : 0,
+        status: formData.status,
+        remark: formData.remark
+      }
       await createAgentApi(submitData)
       ElMessage.success("创建成功")
     } else {
+      // 更新时不提交账号信息
+      const submitData = {
+        type: formData.type,
+        parent_id: formData.parent_id ? Number(formData.parent_id) : undefined,
+        company_name: formData.company_name,
+        contact_name: formData.contact_name,
+        contact_phone: formData.contact_phone,
+        contact_email: formData.contact_email,
+        address: formData.address,
+        status: formData.status,
+        remark: formData.remark
+      }
       await updateAgentApi(currentRowId.value, submitData)
       ElMessage.success("更新成功")
     }
@@ -589,7 +655,7 @@ onMounted(() => {
 
       <!-- 代理类型插槽 -->
       <template #type-slot="{ row }">
-        <el-tag :type="row.type === 1 ? 'danger' : row.type === 2 ? 'warning' : 'info'">
+        <el-tag :type="row.type === 1 ? 'success' : row.type === 2 ? 'warning' : 'info'">
           {{ getAgentTypeLabel(row.type) }}
         </el-tag>
       </template>

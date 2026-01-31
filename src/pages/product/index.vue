@@ -1,44 +1,23 @@
 <script lang="ts" setup>
 import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps } from "vxe-table"
-import type { ProductInfo } from "@/pages/product/apis/type"
-import { getAllProductsApi } from "@/pages/product/apis"
-import { batchDeleteBenefitApi, createBenefitApi, deleteBenefitApi, getBenefitListApi, updateBenefitApi } from "./apis"
+import { batchDeleteProductApi, createProductApi, deleteProductApi, getProductListApi, updateProductApi } from "./apis"
 
 defineOptions({
-  name: "BenefitManagement"
+  name: "ProductManagement"
 })
 
-// #region 产品数据
-const productList = ref<ProductInfo[]>([])
-const productOptions = computed(() => productList.value.map(item => ({ label: item.name, value: Number(item.id) })))
-
-async function loadProducts() {
-  try {
-    const res = await getAllProductsApi()
-    productList.value = res.data.items || []
-  } catch (error) {
-    console.error("加载产品列表失败", error)
-  }
-}
-
-function getProductName(productId: number) {
-  const product = productList.value.find(item => Number(item.id) === productId)
-  return product?.name || "-"
-}
-// #endregion
-
 // #region 常量定义
-const BENEFIT_STATUS_OPTIONS = [
+const PRODUCT_STATUS_OPTIONS = [
   { label: "停用", value: 0 },
   { label: "启用", value: 1 }
 ]
 
-function getBenefitStatusLabel(status: number) {
-  return BENEFIT_STATUS_OPTIONS.find(item => item.value === status)?.label || "未知"
+function getProductStatusLabel(status: number) {
+  return PRODUCT_STATUS_OPTIONS.find(item => item.value === status)?.label || "未知"
 }
 
-function getBenefitStatusType(status: number) {
+function getProductStatusType(status: number) {
   return status === 1 ? "success" : "info"
 }
 // #endregion
@@ -46,10 +25,10 @@ function getBenefitStatusType(status: number) {
 // #region vxe-grid
 interface RowMeta {
   id: string
-  product_id: number
   name: string
   code: string
-  unit_name: string
+  description: string
+  sort: number
   status: number
   created_at: string
   updated_at: string
@@ -70,22 +49,11 @@ const xGridOpt: VxeGridProps = reactive({
   formConfig: {
     items: [
       {
-        field: "product_id",
-        itemRender: {
-          name: "VxeSelect",
-          options: [],
-          props: {
-            placeholder: "所属产品",
-            clearable: true
-          }
-        }
-      },
-      {
         field: "name",
         itemRender: {
           name: "VxeInput",
           props: {
-            placeholder: "权益名称",
+            placeholder: "产品名称",
             clearable: true
           }
         }
@@ -94,7 +62,7 @@ const xGridOpt: VxeGridProps = reactive({
         field: "status",
         itemRender: {
           name: "VxeSelect",
-          options: BENEFIT_STATUS_OPTIONS,
+          options: PRODUCT_STATUS_OPTIONS,
           props: {
             placeholder: "状态",
             clearable: true
@@ -141,27 +109,24 @@ const xGridOpt: VxeGridProps = reactive({
       width: 50
     },
     {
-      field: "product_id",
-      title: "所属产品",
-      minWidth: 120,
-      slots: {
-        default: "product-slot"
-      }
-    },
-    {
       field: "name",
-      title: "权益名称",
+      title: "产品名称",
       minWidth: 150
     },
     {
       field: "code",
-      title: "权益编码",
+      title: "产品编码",
       minWidth: 150
     },
     {
-      field: "unit_name",
-      title: "单位",
-      width: 100
+      field: "description",
+      title: "描述",
+      minWidth: 200
+    },
+    {
+      field: "sort",
+      title: "排序",
+      width: 80
     },
     {
       field: "status",
@@ -197,7 +162,7 @@ const xGridOpt: VxeGridProps = reactive({
     ajax: {
       query: async ({ page, form }) => {
         xGridOpt.loading = true
-        return getBenefitListApi({
+        return getProductListApi({
           page: page.currentPage,
           per_page: page.pageSize,
           ...form
@@ -227,18 +192,18 @@ const currentRowId = ref("")
 const xFormDom = useTemplateRef<VxeFormInstance>("xFormDom")
 
 interface FormData {
-  product_id: number | null
   name: string
   code: string
-  unit_name: string
+  description: string
+  sort: number
   status: number
 }
 
 const formData = reactive<FormData>({
-  product_id: null,
   name: "",
   code: "",
-  unit_name: "",
+  description: "",
+  sort: 0,
   status: 1
 })
 
@@ -247,47 +212,49 @@ const xFormOpt = reactive<VxeFormProps>({
   titleAlign: "right",
   items: [
     {
-      field: "product_id",
-      title: "所属产品",
-      span: 24,
-      itemRender: {
-        name: "VxeSelect",
-        options: [],
-        props: {
-          placeholder: "请选择所属产品"
-        }
-      }
-    },
-    {
       field: "name",
-      title: "权益名称",
+      title: "产品名称",
       span: 24,
       itemRender: {
         name: "VxeInput",
         props: {
-          placeholder: "请输入权益名称"
+          placeholder: "请输入产品名称"
         }
       }
     },
     {
       field: "code",
-      title: "权益编码",
+      title: "产品编码",
       span: 24,
       itemRender: {
         name: "VxeInput",
         props: {
-          placeholder: "请输入权益编码（字母、数字、下划线）"
+          placeholder: "请输入产品编码（字母、数字、下划线）"
         }
       }
     },
     {
-      field: "unit_name",
-      title: "单位名称",
+      field: "description",
+      title: "产品描述",
+      span: 24,
+      itemRender: {
+        name: "VxeTextarea",
+        props: {
+          placeholder: "请输入产品描述",
+          rows: 3
+        }
+      }
+    },
+    {
+      field: "sort",
+      title: "排序",
       span: 24,
       itemRender: {
         name: "VxeInput",
         props: {
-          placeholder: "如：次、GB、个"
+          type: "integer",
+          placeholder: "排序值，越大越靠前",
+          min: 0
         }
       }
     },
@@ -297,7 +264,7 @@ const xFormOpt = reactive<VxeFormProps>({
       span: 24,
       itemRender: {
         name: "VxeSelect",
-        options: BENEFIT_STATUS_OPTIONS,
+        options: PRODUCT_STATUS_OPTIONS,
         props: {
           placeholder: "请选择状态"
         }
@@ -323,23 +290,21 @@ const xFormOpt = reactive<VxeFormProps>({
     }
   ],
   rules: {
-    product_id: [{ required: true, message: "请选择所属产品" }],
-    name: [{ required: true, message: "请输入权益名称" }],
+    name: [{ required: true, message: "请输入产品名称" }],
     code: [
-      { required: true, message: "请输入权益编码" },
+      { required: true, message: "请输入产品编码" },
       { pattern: /^[\w-]+$/, message: "只能包含字母、数字、下划线和破折号" }
-    ],
-    unit_name: [{ required: true, message: "请输入单位名称" }]
+    ]
   },
   data: formData
 })
 
 function resetForm() {
   Object.assign(formData, {
-    product_id: null,
     name: "",
     code: "",
-    unit_name: "",
+    description: "",
+    sort: 0,
     status: 1
   })
 }
@@ -347,16 +312,16 @@ function resetForm() {
 function openDrawer(type: "create" | "update", row?: RowMeta) {
   currentFormType.value = type
   if (type === "create") {
-    drawerTitle.value = "新增权益类型"
+    drawerTitle.value = "新增产品"
     resetForm()
   } else if (type === "update" && row) {
-    drawerTitle.value = "编辑权益类型"
+    drawerTitle.value = "编辑产品"
     currentRowId.value = row.id
     Object.assign(formData, {
-      product_id: row.product_id,
       name: row.name,
       code: row.code,
-      unit_name: row.unit_name,
+      description: row.description,
+      sort: row.sort,
       status: row.status
     })
   }
@@ -382,10 +347,10 @@ async function submitForm() {
 
   try {
     if (currentFormType.value === "create") {
-      await createBenefitApi(formData)
+      await createProductApi(formData)
       ElMessage.success("创建成功")
     } else {
-      await updateBenefitApi(currentRowId.value, formData)
+      await updateProductApi(currentRowId.value, formData)
       ElMessage.success("更新成功")
     }
 
@@ -412,7 +377,7 @@ function handleDelete(row: RowMeta) {
   const options: ElMessageBoxOptions = {
     title: "删除确认",
     message: h("p", null, [
-      h("span", null, "确定删除权益类型 "),
+      h("span", null, "确定删除产品 "),
       h("b", { style: "color: var(--el-color-danger)" }, row.name),
       h("span", null, " 吗？")
     ]),
@@ -423,7 +388,7 @@ function handleDelete(row: RowMeta) {
 
   ElMessageBox.confirm(options.message!, options.title, options)
     .then(async () => {
-      await deleteBenefitApi(row.id)
+      await deleteProductApi(row.id)
       ElMessage.success("删除成功")
       xGridDom.value?.commitProxy("query")
     })
@@ -453,7 +418,7 @@ function handleBatchDelete() {
   ElMessageBox.confirm(options.message!, options.title, options)
     .then(async () => {
       const ids = selectRecords.map(item => item.id)
-      await batchDeleteBenefitApi({ ids })
+      await batchDeleteProductApi({ ids })
       ElMessage.success("删除成功")
       xGridDom.value?.commitProxy("query")
     })
@@ -463,21 +428,7 @@ function handleBatchDelete() {
 }
 // #endregion
 
-onMounted(async () => {
-  await loadProducts()
-  // 更新查询表单和编辑表单的产品下拉选项
-  if (xGridOpt.formConfig?.items) {
-    const productItem = xGridOpt.formConfig.items.find(item => item.field === "product_id")
-    if (productItem?.itemRender) {
-      productItem.itemRender.options = productOptions.value
-    }
-  }
-  if (xFormOpt.items) {
-    const productItem = xFormOpt.items.find(item => item.field === "product_id")
-    if (productItem?.itemRender) {
-      productItem.itemRender.options = productOptions.value
-    }
-  }
+onMounted(() => {
   xGridDom.value?.commitProxy("query")
 })
 </script>
@@ -496,15 +447,10 @@ onMounted(async () => {
         </vxe-button>
       </template>
 
-      <!-- 产品插槽 -->
-      <template #product-slot="{ row }">
-        {{ getProductName(row.product_id) }}
-      </template>
-
       <!-- 状态插槽 -->
       <template #status-slot="{ row }">
-        <el-tag :type="getBenefitStatusType(row.status)">
-          {{ getBenefitStatusLabel(row.status) }}
+        <el-tag :type="getProductStatusType(row.status)">
+          {{ getProductStatusLabel(row.status) }}
         </el-tag>
       </template>
 

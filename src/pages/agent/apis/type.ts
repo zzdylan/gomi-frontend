@@ -1,5 +1,15 @@
+export interface UserInfo {
+  id: string
+  username: string
+  name?: string
+  email?: string
+  phone?: string
+}
+
 export interface AgentInfo {
   id: string
+  user_id: string
+  user?: UserInfo // 关联的用户信息
   type: number // 1=总代理 2=普通代理 3=下级代理
   parent_id: string
   company_name: string
@@ -30,8 +40,12 @@ export interface AgentBalanceLog {
 
 /** 创建代理商请求数据 */
 export interface CreateAgentRequestData {
+  // 账号信息
+  username: string
+  password: string
+  // 代理商信息
   type: number
-  parent_id?: string
+  parent_id?: number
   company_name: string
   contact_name: string
   contact_phone: string

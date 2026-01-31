@@ -1,5 +1,6 @@
 export interface BenefitInfo {
   id: string
+  product_id: number
   name: string
   code: string
   unit_name: string
@@ -10,6 +11,7 @@ export interface BenefitInfo {
 
 /** 创建权益请求数据 */
 export interface CreateBenefitRequestData {
+  product_id: number
   name: string
   code: string
   unit_name: string

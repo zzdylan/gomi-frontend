@@ -472,7 +472,8 @@ async function submitForm() {
   try {
     const submitData = {
       ...formData,
-      price: Math.round(formData.price * 100) // 元转分
+      price: Math.round(formData.price * 100), // 元转分
+      duration: Number(formData.duration) // 确保是数字类型
     }
 
     if (currentFormType.value === "create") {

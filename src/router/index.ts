@@ -195,6 +195,23 @@ export const constantRoutes: RouteRecordRaw[] = [
       title: "模板编辑器",
       hidden: true
     }
+  },
+  {
+    path: "/profile",
+    component: Layouts,
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/profile/index.vue"),
+        name: "Profile",
+        meta: {
+          title: "个人中心"
+        }
+      }
+    ]
   }
   // 示例路由 - 已注释，可作为参考
   // {
@@ -384,7 +401,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
   {
     path: "/package-system",
     component: Layouts,
-    redirect: "/package-system/benefit",
+    redirect: "/package-system/product",
     name: "PackageSystem",
     meta: {
       title: "套餐管理",
@@ -393,6 +410,16 @@ export const dynamicRoutes: RouteRecordRaw[] = [
       alwaysShow: true
     },
     children: [
+      {
+        path: "product",
+        component: () => import("@/pages/product/index.vue"),
+        name: "ProductManagement",
+        meta: {
+          title: "产品管理",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      },
       {
         path: "benefit",
         component: () => import("@/pages/benefit/index.vue"),

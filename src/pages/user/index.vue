@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import type { UserBenefitInfo, UserPackageInfo } from "@@/apis/users/type"
 import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps } from "vxe-table"
-// import type { UserInfo } from "@@/apis/users/type"
-import { batchDeleteUserApi, createUserApi, deleteUserApi, getUserListApi, updateUserApi } from "@@/apis/users"
+import type { PackageInfo } from "@/pages/package/apis/type"
+import { batchDeleteUserApi, createUserApi, deleteUserApi, deleteUserPackageApi, getUserBenefitsApi, getUserListApi, getUserPackagesApi, grantUserPackageApi, impersonateUserApi, updateUserApi } from "@@/apis/users"
+import { getAllPackagesApi } from "@/pages/package/apis"
+import { useUserStore } from "@/pinia/stores/user"
 
 defineOptions({
   name: "UserManagement"
@@ -129,7 +132,7 @@ const xGridOpt: VxeGridProps = reactive({
     },
     {
       title: "操作",
-      width: "150px",
+      width: "260px",
       fixed: "right",
       showOverflow: false,
       slots: {
@@ -272,6 +275,7 @@ const xFormOpt: VxeFormProps = reactive({
           multiple: true,
           options: [
             { label: "超级管理员", value: "super_admin" },
+            { label: "代理商", value: "agent" },
             { label: "普通用户", value: "normal_user" }
           ]
         }
@@ -505,13 +509,184 @@ const crudStore = reactive({
 })
 
 // 角色映射
-const roleMap = {
+const roleMap: Record<string, string> = {
   super_admin: "超级管理员",
+  agent: "代理商",
   normal_user: "普通用户"
 }
 
 function getRoleLabel(role: string) {
   return roleMap[role as keyof typeof roleMap] || role
+}
+
+// 一键登录
+const userStore = useUserStore()
+
+async function handleImpersonate(row: RowMeta) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要以 <strong style="color: var(--el-color-primary);">${row.username}</strong> 的身份登录吗？`,
+      "一键登录",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+        dangerouslyUseHTMLString: true
+      }
+    )
+
+    const res = await impersonateUserApi(row.id)
+    const { token, username } = res.data
+
+    // 保存当前管理员信息，用于返回
+    localStorage.setItem("admin_backup_token", userStore.token)
+    localStorage.setItem("admin_backup_username", userStore.username)
+
+    // 设置新 token
+    userStore.setToken(token)
+
+    // 标记为模拟登录状态
+    localStorage.setItem("impersonate_username", username)
+
+    ElMessage.success(`已切换到用户 ${username}`)
+
+    // 跳转到首页
+    location.href = "/"
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("一键登录失败", error)
+    }
+  }
+}
+// #endregion
+
+// #region 套餐管理
+const packageDrawerVisible = ref(false)
+const packageDrawerLoading = ref(false)
+const currentPackageUser = ref<RowMeta | null>(null)
+const userPackages = ref<UserPackageInfo[]>([])
+const userBenefits = ref<UserBenefitInfo[]>([])
+const packageList = ref<PackageInfo[]>([])
+const selectedPackageId = ref<number | null>(null)
+const grantLoading = ref(false)
+
+// 套餐状态
+const packageStatusMap: Record<number, { label: string, type: "success" | "info" | "warning" }> = {
+  1: { label: "正常", type: "success" },
+  2: { label: "已过期", type: "info" },
+  3: { label: "已取消", type: "warning" }
+}
+
+function getPackageStatus(status: number) {
+  return packageStatusMap[status] || { label: "未知", type: "info" }
+}
+
+// 打开套餐管理抽屉
+async function openPackageDrawer(row: RowMeta) {
+  currentPackageUser.value = row
+  packageDrawerVisible.value = true
+  packageDrawerLoading.value = true
+  selectedPackageId.value = null
+
+  try {
+    // 并行加载数据
+    const [packagesRes, benefitsRes, packageListRes] = await Promise.all([
+      getUserPackagesApi(row.id),
+      getUserBenefitsApi(row.id),
+      getAllPackagesApi()
+    ])
+
+    userPackages.value = packagesRes.data.items || []
+    userBenefits.value = benefitsRes.data.items || []
+    packageList.value = packageListRes.data.items || []
+  } catch (error) {
+    console.error("加载套餐数据失败", error)
+    ElMessage.error("加载数据失败")
+  } finally {
+    packageDrawerLoading.value = false
+  }
+}
+
+// 关闭套餐管理抽屉
+function closePackageDrawer() {
+  packageDrawerVisible.value = false
+  currentPackageUser.value = null
+  userPackages.value = []
+  userBenefits.value = []
+  selectedPackageId.value = null
+}
+
+// 开通套餐
+async function handleGrantPackage() {
+  if (!selectedPackageId.value) {
+    ElMessage.warning("请选择要开通的套餐")
+    return
+  }
+
+  if (!currentPackageUser.value) return
+
+  grantLoading.value = true
+  try {
+    await grantUserPackageApi(currentPackageUser.value.id, {
+      package_id: selectedPackageId.value
+    })
+    ElMessage.success("开通成功")
+
+    // 刷新数据
+    const [packagesRes, benefitsRes] = await Promise.all([
+      getUserPackagesApi(currentPackageUser.value.id),
+      getUserBenefitsApi(currentPackageUser.value.id)
+    ])
+    userPackages.value = packagesRes.data.items || []
+    userBenefits.value = benefitsRes.data.items || []
+    selectedPackageId.value = null
+  } catch (error) {
+    console.error("开通套餐失败", error)
+  } finally {
+    grantLoading.value = false
+  }
+}
+
+// 计算权益剩余数量
+function getBenefitLeft(benefit: UserBenefitInfo) {
+  return benefit.total_amount - benefit.used_amount
+}
+
+// 判断权益是否过期
+function isBenefitExpired(benefit: UserBenefitInfo) {
+  return new Date(benefit.expire_at) < new Date()
+}
+
+// 删除用户套餐
+async function handleDeletePackage(pkg: UserPackageInfo) {
+  if (!currentPackageUser.value) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定删除套餐 "${pkg.package_name}" 吗？关联的权益也会一并删除。`,
+      "删除确认",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      }
+    )
+
+    await deleteUserPackageApi(currentPackageUser.value.id, pkg.id)
+    ElMessage.success("删除成功")
+
+    // 刷新数据
+    const [packagesRes, benefitsRes] = await Promise.all([
+      getUserPackagesApi(currentPackageUser.value.id),
+      getUserBenefitsApi(currentPackageUser.value.id)
+    ])
+    userPackages.value = packagesRes.data.items || []
+    userBenefits.value = benefitsRes.data.items || []
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("删除套餐失败", error)
+    }
+  }
 }
 // #endregion
 </script>
@@ -553,6 +728,12 @@ function getRoleLabel(role: string) {
         <el-button link type="primary" @click="crudStore.onShowDrawer(row)">
           修改
         </el-button>
+        <el-button link type="success" @click="openPackageDrawer(row)">
+          套餐
+        </el-button>
+        <el-button link type="warning" @click="handleImpersonate(row)">
+          登录
+        </el-button>
         <el-button link type="danger" @click="crudStore.onDelete(row)">
           删除
         </el-button>
@@ -593,6 +774,107 @@ function getRoleLabel(role: string) {
         </div>
       </template>
     </el-drawer>
+
+    <!-- 套餐管理抽屉 -->
+    <el-drawer
+      v-model="packageDrawerVisible"
+      :title="`套餐管理 - ${currentPackageUser?.username || ''}`"
+      direction="rtl"
+      size="600px"
+      @close="closePackageDrawer"
+    >
+      <div v-loading="packageDrawerLoading" class="package-drawer-content">
+        <!-- 开通套餐 -->
+        <div class="section">
+          <div class="section-title">
+            开通套餐
+          </div>
+          <div class="grant-form">
+            <el-select
+              v-model="selectedPackageId"
+              placeholder="选择要开通的套餐"
+              style="width: 300px"
+            >
+              <el-option
+                v-for="pkg in packageList"
+                :key="pkg.id"
+                :label="`${pkg.name} (${pkg.duration}天 / ¥${(pkg.price / 100).toFixed(2)})`"
+                :value="Number(pkg.id)"
+              />
+            </el-select>
+            <el-button
+              type="primary"
+              :loading="grantLoading"
+              :disabled="!selectedPackageId"
+              @click="handleGrantPackage"
+            >
+              开通
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 已有套餐 -->
+        <div class="section">
+          <div class="section-title">
+            已有套餐
+          </div>
+          <el-table :data="userPackages" style="width: 100%" empty-text="暂无套餐">
+            <el-table-column prop="package_name" label="套餐名称" />
+            <el-table-column label="类型" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.is_main ? 'primary' : 'info'" size="small">
+                  {{ row.is_main ? '主套餐' : '附加' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="getPackageStatus(row.status).type" size="small">
+                  {{ getPackageStatus(row.status).label }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="expire_at" label="过期时间" width="160" />
+            <el-table-column label="操作" width="80" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="danger" size="small" @click="handleDeletePackage(row)">
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <!-- 权益余额 -->
+        <div class="section">
+          <div class="section-title">
+            权益余额
+          </div>
+          <el-table :data="userBenefits" style="width: 100%" empty-text="暂无权益">
+            <el-table-column label="权益名称" min-width="120">
+              <template #default="{ row }">
+                {{ row.benefit?.name || `权益${row.benefit_id}` }}
+              </template>
+            </el-table-column>
+            <el-table-column label="剩余/总量" width="140">
+              <template #default="{ row }">
+                <span :class="{ 'text-danger': getBenefitLeft(row) <= 0 }">
+                  {{ getBenefitLeft(row) }} / {{ row.total_amount }} {{ row.benefit?.unit_name || '' }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="isBenefitExpired(row) ? 'info' : 'success'" size="small">
+                  {{ isBenefitExpired(row) ? '已过期' : '有效' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="expire_at" label="过期时间" width="160" />
+          </el-table>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -627,5 +909,32 @@ function getRoleLabel(role: string) {
 /* 重置 Element Plus 抽屉头部默认样式 */
 :deep(.el-drawer__header) {
   margin-bottom: 0;
+}
+
+/* 套餐管理抽屉样式 */
+.package-drawer-content {
+  padding: 0 10px;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.grant-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.text-danger {
+  color: var(--el-color-danger);
 }
 </style>

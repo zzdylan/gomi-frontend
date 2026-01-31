@@ -5,6 +5,7 @@ import { request } from "@/http/axios"
 export function getBenefitListApi(params?: {
   page?: number
   per_page?: number
+  product_id?: number
   status?: number
   name?: string
 }) {
