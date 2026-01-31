@@ -382,7 +382,11 @@ async function submitForm() {
 
   try {
     if (currentFormType.value === "create") {
-      await createBenefitApi(formData)
+      if (!formData.product_id) {
+        ElMessage.warning("请选择所属产品")
+        return
+      }
+      await createBenefitApi({ ...formData, product_id: formData.product_id })
       ElMessage.success("创建成功")
     } else {
       await updateBenefitApi(currentRowId.value, formData)

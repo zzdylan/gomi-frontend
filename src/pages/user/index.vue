@@ -567,7 +567,7 @@ const currentPackageUser = ref<RowMeta | null>(null)
 const userPackages = ref<UserPackageInfo[]>([])
 const userBenefits = ref<UserBenefitInfo[]>([])
 const packageList = ref<PackageInfo[]>([])
-const selectedPackageId = ref<number | null>(null)
+const selectedPackageId = ref<number | undefined>(undefined)
 const grantLoading = ref(false)
 
 // 套餐状态
@@ -586,7 +586,7 @@ async function openPackageDrawer(row: RowMeta) {
   currentPackageUser.value = row
   packageDrawerVisible.value = true
   packageDrawerLoading.value = true
-  selectedPackageId.value = null
+  selectedPackageId.value = undefined
 
   try {
     // 并行加载数据
@@ -613,7 +613,7 @@ function closePackageDrawer() {
   currentPackageUser.value = null
   userPackages.value = []
   userBenefits.value = []
-  selectedPackageId.value = null
+  selectedPackageId.value = undefined
 }
 
 // 开通套餐
@@ -639,7 +639,7 @@ async function handleGrantPackage() {
     ])
     userPackages.value = packagesRes.data.items || []
     userBenefits.value = benefitsRes.data.items || []
-    selectedPackageId.value = null
+    selectedPackageId.value = undefined
   } catch (error) {
     console.error("开通套餐失败", error)
   } finally {

@@ -528,8 +528,8 @@ async function submitForm() {
     if (currentFormType.value === "create") {
       // 新增时提交账号信息
       const submitData = {
-        username: formData.username,
-        password: formData.password,
+        username: formData.username || "",
+        password: formData.password || "",
         type: formData.type,
         parent_id: formData.parent_id ? Number(formData.parent_id) : undefined,
         company_name: formData.company_name,
@@ -547,7 +547,7 @@ async function submitForm() {
       // 更新时不提交账号信息
       const submitData = {
         type: formData.type,
-        parent_id: formData.parent_id ? Number(formData.parent_id) : undefined,
+        parent_id: formData.parent_id ? String(formData.parent_id) : undefined,
         company_name: formData.company_name,
         contact_name: formData.contact_name,
         contact_phone: formData.contact_phone,
