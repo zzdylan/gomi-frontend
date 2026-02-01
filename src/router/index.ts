@@ -94,27 +94,26 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/template",
+    path: "/creative",
     component: Layouts,
-    redirect: "/template/manage",
-    name: "Template",
+    name: "Creative",
     meta: {
-      title: "模板管理",
-      elIcon: "Document",
+      title: "创作空间",
+      elIcon: "Picture",
       alwaysShow: true
     },
     children: [
       {
-        path: "manage",
+        path: "template",
         component: () => import("@/pages/template-manage/index.vue"),
         name: "TemplateManage",
         meta: {
-          title: "模板列表",
+          title: "模板库",
           keepAlive: true
         }
       },
       {
-        path: "editor-konva",
+        path: "template/editor",
         component: () => import("@/pages/template-editor/index-konva.vue"),
         name: "TemplateEditorKonva",
         meta: {
@@ -122,51 +121,27 @@ export const constantRoutes: RouteRecordRaw[] = [
           keepAlive: true,
           hidden: true
         }
-      }
-    ]
-  },
-  {
-    path: "/material",
-    component: Layouts,
-    name: "Material",
-    meta: {
-      title: "素材库",
-      elIcon: "Picture",
-      alwaysShow: true
-    },
-    children: [
+      },
       {
-        path: "index",
+        path: "material",
         component: () => import("@/pages/material/index.vue"),
         name: "MaterialLibrary",
         meta: {
-          title: "素材管理",
-          keepAlive: true
-        }
-      }
-    ]
-  },
-  {
-    path: "/copy-library",
-    component: Layouts,
-    name: "CopyLibrary",
-    meta: {
-      title: "文案库",
-      elIcon: "EditPen",
-      alwaysShow: true
-    },
-    children: [
-      {
-        path: "index",
-        component: () => import("@/pages/copy-library/index.vue"),
-        name: "CopyLibraryList",
-        meta: {
-          title: "文案库管理",
+          title: "素材库",
           keepAlive: true
         }
       },
       {
-        path: "combine",
+        path: "copy-library",
+        component: () => import("@/pages/copy-library/index.vue"),
+        name: "CopyLibraryList",
+        meta: {
+          title: "文案库",
+          keepAlive: true
+        }
+      },
+      {
+        path: "copy-library/combine",
         component: () => import("@/pages/copy-library/combine.vue"),
         name: "CopyLibraryCombine",
         meta: {
@@ -176,7 +151,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "smart",
+        path: "copy-library/smart",
         component: () => import("@/pages/copy-library/smart.vue"),
         name: "CopyLibrarySmart",
         meta: {

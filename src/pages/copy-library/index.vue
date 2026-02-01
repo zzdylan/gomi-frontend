@@ -222,21 +222,21 @@ const crudStore = reactive({
   clearTable: () => xGridDom.value?.reloadData([]),
   /** 创建组合文案 */
   goToCombine: () => {
-    router.push("/copy-library/combine")
+    router.push({ name: "CopyLibraryCombine" })
   },
   /** 创建智能文案 */
   goToSmart: () => {
-    router.push("/copy-library/smart")
+    router.push({ name: "CopyLibrarySmart" })
   },
   /** 查看词条 */
   onViewWords: (row: RowMeta) => {
     // 根据类型跳转到不同页面
     if (row.type === 1) {
       // 组合文案
-      router.push(`/copy-library/combine?id=${row.id}`)
+      router.push({ name: "CopyLibraryCombine", query: { id: row.id } })
     } else if (row.type === 2) {
       // 智能文案
-      router.push(`/copy-library/smart?id=${row.id}`)
+      router.push({ name: "CopyLibrarySmart", query: { id: row.id } })
     } else {
       ElMessage.warning("未知的文案库类型")
     }

@@ -323,7 +323,7 @@ async function loadTemplateFromRoute() {
 
 // 返回模板列表
 function handleBack() {
-  router.push("/template/manage")
+  router.push({ name: "TemplateManage" })
 }
 
 // 转换元素格式供图层面板使用 - 传递必要的显示字段

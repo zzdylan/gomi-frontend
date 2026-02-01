@@ -152,7 +152,7 @@ async function handleDropdownVisible(visible: boolean) {
             </div>
             <!-- 菜单 -->
             <el-dropdown-menu>
-              <el-dropdown-item @click="router.push('/profile')">
+              <el-dropdown-item @click="router.push({ name: 'Profile' })">
                 个人中心
               </el-dropdown-item>
               <el-dropdown-item @click="logout">

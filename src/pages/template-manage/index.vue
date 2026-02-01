@@ -197,7 +197,7 @@ function toggleSelectAll() {
 // 打开模板编辑器（使用模板）
 function openTemplateEditor(template: TemplateItem) {
   router.push({
-    path: "/template-editor",
+    name: "TemplateEditor",
     query: {
       templateId: template.id,
       folderId: currentFolderId.value
@@ -208,7 +208,7 @@ function openTemplateEditor(template: TemplateItem) {
 // 新建模板
 function createNewTemplate() {
   router.push({
-    path: "/template-editor",
+    name: "TemplateEditor",
     query: { folderId: currentFolderId.value }
   })
 }

@@ -274,7 +274,7 @@ async function generateSmart() {
 
       // 跳转回列表
       setTimeout(() => {
-        router.push("/copy-library/index")
+        router.push({ name: "CopyLibraryList" })
       }, 1500)
     }
   } catch (error: any) {
@@ -541,7 +541,7 @@ onMounted(() => {
 
     <!-- 底部按钮 -->
     <div class="bottom-actions">
-      <el-button @click="router.push('/copy-library/index')">
+      <el-button @click="router.push({ name: 'CopyLibraryList' })">
         返回列表
       </el-button>
       <el-button type="primary" size="large" @click="generateSmart" class="generate-btn">
