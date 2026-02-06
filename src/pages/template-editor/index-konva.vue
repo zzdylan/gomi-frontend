@@ -312,8 +312,6 @@ async function loadTemplateFromRoute() {
       // 加载模板内容
       const templateContent = JSON.parse(data.content)
       loadFromJSON(templateContent)
-
-      ElMessage.success("模板加载成功")
     } catch (error) {
       ElMessage.error("模板加载失败")
       console.error("加载模板失败:", error)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Delete, Document, Download, EditPen, FolderOpened, RefreshLeft } from "@element-plus/icons-vue"
-import MaterialSelector from "./material-selector.vue"
+import MaterialSelector from "@/common/components/MaterialSelector/index.vue"
 
 defineProps<{
   hasSelection: boolean
@@ -21,8 +21,8 @@ function showMaterialSelector() {
   materialSelectorVisible.value = true
 }
 
-function handleMaterialSelect(url: string) {
-  emit("addImage", url)
+function handleMaterialSelect(material: { url: string }) {
+  emit("addImage", material.url)
   materialSelectorVisible.value = false
 }
 </script>
@@ -96,6 +96,7 @@ function handleMaterialSelect(url: string) {
       :close-on-click-modal="false"
     >
       <MaterialSelector
+        :accept-types="['image']"
         @select="handleMaterialSelect"
         @close="materialSelectorVisible = false"
       />

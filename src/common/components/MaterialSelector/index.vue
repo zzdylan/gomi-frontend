@@ -1,13 +1,51 @@
 <script setup lang="ts">
-import type { MaterialFolderItem, MaterialItem } from "@/pages/material/apis/type"
+import type { MaterialFolderItem, MaterialItem, MaterialType } from "@/pages/material/apis/type"
 import { Folder, Upload } from "@element-plus/icons-vue"
-import MaterialUpload from "@/components/MaterialUpload.vue"
+import MaterialUpload from "@/common/components/MaterialUpload/index.vue"
 import { getMaterialFolderListApi, getMaterialListApi } from "@/pages/material/apis"
 
+// Props 定义
+interface Props {
+  /** 允许选择的素材类型，默认 ['image', 'video'] 全部 */
+  acceptTypes?: MaterialType[]
+  /** 是否显示类型筛选下拉框，默认根据 acceptTypes 自动判断 */
+  showTypeFilter?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  acceptTypes: () => ["image", "video"],
+  showTypeFilter: undefined
+})
+
 const emit = defineEmits<{
-  select: [url: string]
+  /** 选择素材时触发，返回素材对象 */
+  select: [material: MaterialItem]
+  /** 关闭选择器 */
   close: []
 }>()
+
+// 是否显示类型筛选（如果只有一种类型则不显示）
+const shouldShowTypeFilter = computed(() => {
+  if (props.showTypeFilter !== undefined) {
+    return props.showTypeFilter
+  }
+  return props.acceptTypes.length > 1
+})
+
+// 类型筛选选项
+const typeOptions = computed(() => {
+  const options: { label: string, value: MaterialType | "" }[] = []
+  if (props.acceptTypes.length > 1) {
+    options.push({ label: "全部", value: "" })
+  }
+  if (props.acceptTypes.includes("image")) {
+    options.push({ label: "图片", value: "image" })
+  }
+  if (props.acceptTypes.includes("video")) {
+    options.push({ label: "视频", value: "video" })
+  }
+  return options
+})
 
 // 文件夹导航
 interface BreadcrumbItem {
@@ -28,7 +66,11 @@ const loadingMaterials = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
-const filterType = ref("image") // 默认只显示图片
+
+// 当前筛选类型
+const filterType = ref<MaterialType | "">(
+  props.acceptTypes.length === 1 ? props.acceptTypes[0] : ""
+)
 
 // 加载文件夹列表
 async function loadFolders() {
@@ -63,12 +105,18 @@ function navigateToFolder(index: number) {
 async function loadMaterials() {
   loadingMaterials.value = true
   try {
-    const params: any = {
+    const params: Record<string, any> = {
       folder_id: currentFolderId.value,
       page: currentPage.value,
-      per_page: pageSize.value,
-      type: filterType.value
+      per_page: pageSize.value
     }
+
+    if (filterType.value) {
+      params.type = filterType.value
+    } else if (props.acceptTypes.length === 1) {
+      params.type = props.acceptTypes[0]
+    }
+
     const { data } = await getMaterialListApi(params)
     materials.value = data.materials
     total.value = data.paging.total_count
@@ -92,7 +140,7 @@ function handleTypeChange() {
 
 // 选择素材
 function handleSelect(material: MaterialItem) {
-  emit("select", material.url)
+  emit("select", material)
   emit("close")
 }
 
@@ -148,14 +196,12 @@ onMounted(() => {
           v-for="folder in folders"
           :key="folder.id"
           class="folder-item"
+          @click="enterFolder(folder)"
         >
-          <div class="folder-content" @dblclick="enterFolder(folder)">
-            <el-icon><Folder /></el-icon>
-            <span>{{ folder.name }}</span>
-            <el-tag size="small" type="info" class="enter-hint">
-              双击进入
-            </el-tag>
-          </div>
+          <el-icon class="folder-icon">
+            <Folder />
+          </el-icon>
+          <span class="folder-name">{{ folder.name }}</span>
         </div>
 
         <div v-if="folders.length === 0 && !loadingFolders" class="empty-folder">
@@ -168,17 +214,22 @@ onMounted(() => {
     <div class="material-content">
       <!-- 工具栏 -->
       <div class="material-toolbar">
-        <el-select
-          v-model="filterType"
-          placeholder="素材类型"
-          size="default"
-          style="width: 120px"
-          @change="handleTypeChange"
-        >
-          <el-option label="图片" value="image" />
-          <el-option label="视频" value="video" />
-        </el-select>
-
+        <div class="toolbar-left">
+          <el-select
+            v-if="shouldShowTypeFilter"
+            v-model="filterType"
+            style="width: 100px"
+            size="default"
+            @change="handleTypeChange"
+          >
+            <el-option
+              v-for="opt in typeOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+        </div>
         <el-button type="primary" @click="uploadDialogVisible = true">
           <el-icon><Upload /></el-icon>
           上传素材
@@ -197,13 +248,11 @@ onMounted(() => {
           class="material-card"
           @click="handleSelect(material)"
         >
-          <!-- 缩略图 -->
           <div class="thumbnail">
             <img v-if="material.type === 'image'" :src="material.url" :alt="material.original_name">
             <video v-else :src="material.url" preload="metadata" />
           </div>
 
-          <!-- 信息 -->
           <div class="material-info">
             <div class="name" :title="material.original_name">
               {{ material.original_name }}
@@ -240,50 +289,55 @@ onMounted(() => {
 <style scoped lang="scss">
 .material-selector {
   display: flex;
-  height: 600px;
-  background: #fff;
+  height: 550px;
+  background: #fafafa;
+  border-radius: 8px;
+  overflow: hidden;
 
-  // 左侧文件夹侧边栏
   .folder-sidebar {
-    width: 260px;
-    border-right: 1px solid #e4e7ed;
+    width: 200px;
+    border-right: 1px solid #ebeef5;
     display: flex;
     flex-direction: column;
     background: #fff;
 
     .folder-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid #e4e7ed;
+      padding: 14px 16px;
+      border-bottom: 1px solid #ebeef5;
 
       h3 {
         margin: 0;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 600;
         color: #303133;
       }
     }
 
     .breadcrumb-nav {
-      padding: 12px 16px;
-      background: #f5f7fa;
-      border-bottom: 1px solid #e4e7ed;
+      padding: 10px 16px;
+      background: #fafafa;
+      border-bottom: 1px solid #ebeef5;
+
+      :deep(.el-breadcrumb) {
+        font-size: 12px;
+      }
 
       :deep(.el-breadcrumb__item) {
         .el-breadcrumb__inner {
           font-weight: normal;
+          color: #909399;
         }
 
-        &.clickable {
-          .el-breadcrumb__inner {
-            cursor: pointer;
-            color: #409eff;
+        &:last-child .el-breadcrumb__inner {
+          color: #303133;
+        }
 
-            &:hover {
-              text-decoration: underline;
-            }
+        &.clickable .el-breadcrumb__inner {
+          cursor: pointer;
+          color: #409eff;
+
+          &:hover {
+            text-decoration: underline;
           }
         }
       }
@@ -297,60 +351,67 @@ onMounted(() => {
       .folder-item {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 8px;
         padding: 10px 12px;
-        margin-bottom: 4px;
-        border-radius: 4px;
+        margin-bottom: 2px;
+        border-radius: 6px;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: all 0.2s;
 
         &:hover {
-          background: #f5f7fa;
+          background: #f0f7ff;
         }
 
-        .folder-content {
-          display: flex;
-          align-items: center;
+        .folder-icon {
+          font-size: 18px;
+          color: #faad14;
+          flex-shrink: 0;
+        }
+
+        .folder-name {
           flex: 1;
-          gap: 8px;
-
-          .el-icon {
-            font-size: 16px;
-          }
-
-          .enter-hint {
-            margin-left: auto;
-            font-size: 12px;
-            opacity: 0;
-            transition: opacity 0.3s;
-          }
-        }
-
-        &:hover .enter-hint {
-          opacity: 1;
+          font-size: 13px;
+          color: #606266;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
 
       .empty-folder {
-        padding: 40px 0;
+        padding: 30px 0;
+
+        :deep(.el-empty__description) {
+          font-size: 12px;
+        }
       }
     }
   }
 
-  // 右侧素材区域
   .material-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: #fff;
 
     .material-toolbar {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 16px 20px;
+      justify-content: space-between;
+      padding: 12px 16px;
       background: #fff;
-      border-bottom: 1px solid #e4e7ed;
+      border-bottom: 1px solid #ebeef5;
+
+      .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      :deep(.el-button) {
+        font-size: 13px;
+      }
     }
 
     .material-grid {
@@ -358,71 +419,107 @@ onMounted(() => {
       overflow-y: auto;
       padding: 16px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       grid-auto-rows: max-content;
       gap: 12px;
       align-content: start;
 
       .empty-tip {
         grid-column: 1 / -1;
-        padding: 40px 0;
+        padding: 60px 0;
       }
 
       .material-card {
         background: #fff;
-        border: 2px solid #e4e7ed;
-        border-radius: 6px;
+        border: 1px solid #ebeef5;
+        border-radius: 8px;
         overflow: hidden;
         cursor: pointer;
-        transition: all 0.2s;
-        height: fit-content;
+        transition: all 0.25s;
 
         &:hover {
           border-color: #409eff;
-          box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+          .thumbnail::after {
+            opacity: 1;
+          }
         }
 
         .thumbnail {
           width: 100%;
-          height: 150px;
+          height: 100px;
           overflow: hidden;
-          background: #f5f7fa;
           position: relative;
+          background-color: #f5f5f5;
+          background-image:
+            linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+          background-size: 12px 12px;
+          background-position:
+            0 0,
+            0 6px,
+            6px -6px,
+            -6px 0;
+
+          &::after {
+            content: "选择";
+            position: absolute;
+            inset: 0;
+            background: rgba(64, 158, 255, 0.85);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.25s;
+          }
 
           img,
           video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             display: block;
           }
         }
 
         .material-info {
-          padding: 8px;
+          padding: 8px 10px;
+          background: #fafafa;
+          border-top: 1px solid #ebeef5;
 
           .name {
             font-size: 12px;
-            color: #303133;
+            color: #606266;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 4px;
+            line-height: 1.4;
           }
 
           .meta {
             font-size: 11px;
             color: #909399;
+            margin-top: 2px;
           }
         }
       }
     }
 
     .pagination {
-      padding: 12px 16px;
-      border-top: 1px solid #e4e7ed;
+      padding: 10px 16px;
+      border-top: 1px solid #ebeef5;
+      background: #fafafa;
       display: flex;
       justify-content: center;
+
+      :deep(.el-pagination) {
+        --el-pagination-font-size: 12px;
+      }
     }
   }
 }

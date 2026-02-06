@@ -37,9 +37,7 @@ function loadImage(url: string): HTMLImageElement | undefined {
   }
 
   const img = new Image()
-  // 不设置 crossOrigin，保证图片能正常显示
-  // 缺点：Canvas 被污染，无法直接导出
-  // 解决：导出时重新用 CORS 模式加载
+  img.crossOrigin = "anonymous"
 
   img.onload = () => {
     imageCache.value.set(url, img)

@@ -29,7 +29,6 @@ interface FileUploadStatus {
 const fileStatusMap = ref<Map<number | string, FileUploadStatus>>(new Map())
 
 function handleUploadChange(file: UploadFile, files: UploadFiles) {
-  // 过滤掉已删除的文件，然后为每个文件生成预览 URL 和初始状态
   uploadFileList.value = files
     .filter(f => !deletedUids.value.has(f.uid))
     .map((f) => {
@@ -83,7 +82,6 @@ async function handleUploadSubmit() {
   let successCount = 0
   let failedCount = 0
 
-  // 逐个上传文件
   for (const file of uploadFileList.value) {
     const status = fileStatusMap.value.get(file.uid)
     if (!status) continue
@@ -116,7 +114,6 @@ async function handleUploadSubmit() {
 
   isUploading.value = false
 
-  // 显示上传结果
   if (failedCount === 0) {
     ElMessage.success(`全部上传成功！共 ${successCount} 个文件`)
     setTimeout(() => {
@@ -172,7 +169,6 @@ function handleClose() {
       </template>
     </el-upload>
 
-    <!-- 待上传文件列表 -->
     <div v-if="uploadFileList.length > 0" class="upload-file-list">
       <div class="list-header">
         待上传文件 ({{ uploadFileList.length }})
@@ -188,7 +184,6 @@ function handleClose() {
             'is-failed': getFileStatus(file.uid)?.status === 'failed',
           }"
         >
-          <!-- 预览图 -->
           <div class="file-preview">
             <video v-if="file.url && isVideo(file)" :src="file.url" preload="metadata" />
             <img v-else-if="file.url" :src="file.url" :alt="file.name">
@@ -196,7 +191,6 @@ function handleClose() {
               <el-icon><Picture /></el-icon>
             </div>
 
-            <!-- 上传状态遮罩 -->
             <div v-if="getFileStatus(file.uid)?.status !== 'pending'" class="upload-mask">
               <el-icon v-if="getFileStatus(file.uid)?.status === 'success'" class="status-icon success">
                 <Check />
@@ -210,7 +204,6 @@ function handleClose() {
             </div>
           </div>
 
-          <!-- 文件信息 -->
           <div class="file-info">
             <div class="file-name" :title="file.name">
               {{ file.name }}
@@ -220,7 +213,6 @@ function handleClose() {
             </div>
           </div>
 
-          <!-- 进度条 -->
           <div v-if="getFileStatus(file.uid)?.status === 'uploading'" class="file-progress">
             <el-progress
               :percentage="getFileStatus(file.uid)?.progress || 0"
@@ -229,7 +221,6 @@ function handleClose() {
             />
           </div>
 
-          <!-- 删除按钮 -->
           <el-button
             v-if="!isUploading && getFileStatus(file.uid)?.status !== 'success'"
             class="delete-btn"
@@ -331,10 +322,7 @@ function handleClose() {
 
       .upload-mask {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        inset: 0;
         background: rgba(0, 0, 0, 0.5);
         display: flex;
         align-items: center;

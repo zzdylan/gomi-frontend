@@ -4,6 +4,7 @@ import type { ElMessageBoxOptions } from "element-plus"
 import type { VxeFormInstance, VxeFormProps, VxeGridInstance, VxeGridProps } from "vxe-table"
 import type { PackageInfo } from "@/pages/package/apis/type"
 import { batchDeleteUserApi, createUserApi, deleteUserApi, deleteUserPackageApi, getUserBenefitsApi, getUserListApi, getUserPackagesApi, grantUserPackageApi, impersonateUserApi, updateUserApi } from "@@/apis/users"
+import { ArrowDown } from "@element-plus/icons-vue"
 import { getAllPackagesApi } from "@/pages/package/apis"
 import { useUserStore } from "@/pinia/stores/user"
 
@@ -132,7 +133,7 @@ const xGridOpt: VxeGridProps = reactive({
     },
     {
       title: "操作",
-      width: "260px",
+      width: "140px",
       fixed: "right",
       showOverflow: false,
       slots: {
@@ -725,18 +726,30 @@ async function handleDeletePackage(pkg: UserPackageInfo) {
       </template>
       <!-- 操作 -->
       <template #row-operate="{ row }">
-        <el-button link type="primary" @click="crudStore.onShowDrawer(row)">
-          修改
-        </el-button>
-        <el-button link type="success" @click="openPackageDrawer(row)">
-          套餐
-        </el-button>
-        <el-button link type="warning" @click="handleImpersonate(row)">
-          登录
-        </el-button>
-        <el-button link type="danger" @click="crudStore.onDelete(row)">
-          删除
-        </el-button>
+        <div class="row-actions">
+          <el-button link type="primary" @click="crudStore.onShowDrawer(row)">
+            修改
+          </el-button>
+          <el-divider direction="vertical" />
+          <el-dropdown trigger="click">
+            <span class="dropdown-link">
+              更多<el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="openPackageDrawer(row)">
+                  套餐管理
+                </el-dropdown-item>
+                <el-dropdown-item @click="handleImpersonate(row)">
+                  一键登录
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="crudStore.onDelete(row)">
+                  <span style="color: var(--el-color-danger)">删除用户</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </template>
     </vxe-grid>
 
@@ -879,6 +892,33 @@ async function handleDeletePackage(pkg: UserPackageInfo) {
 </template>
 
 <style lang="scss" scoped>
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+
+  .el-divider {
+    margin: 0 8px;
+  }
+
+  .dropdown-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 14px;
+    color: var(--el-color-primary);
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      color: var(--el-color-primary-light-3);
+    }
+
+    .el-icon {
+      font-size: 12px;
+    }
+  }
+}
+
 .el-alert {
   margin-bottom: 20px;
 }
