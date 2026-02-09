@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TemplateFolderItem } from "@/pages/template-manage/apis/type"
-import { useKonva } from "@@/composables/useKonva"
+import type { SubtitleTrackClip, VideoTrackClip } from "@/types/timeline"
+import { useTimeline } from "@@/composables/useTimeline"
 import { ArrowLeft, Check, Close, FolderAdd, FolderOpened } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
 import { useRoute, useRouter } from "vue-router"
@@ -26,49 +27,58 @@ const router = useRouter()
 const currentTemplateId = ref<number | null>(null)
 const currentTemplateName = ref("")
 
-// 使用 Konva composable
+// 使用 Timeline composable
 const {
-  elements,
+  content: _content,
   selectedId,
-  activeElement,
   stageSize,
+  videoClips,
+  subtitleClips,
+  visualClips,
+  activeClip,
+  activeClipType,
   addText,
   addImage,
+  deleteClip,
   deleteSelected,
-  selectElement,
-  deleteElement,
-  reorderLayers,
+  selectClip,
+  updateVideoClip,
+  updateSubtitleClip,
   clearCanvas,
   exportJSON,
+  exportForAliyun: _exportForAliyun,
   loadFromJSON,
-  updateElement
-} = useKonva()
+  reorderVideoClips,
+  reorderSubtitleClips
+} = useTimeline()
 
-// 处理属性更新 - 超级简单，因为是响应式的
-function handlePropertyUpdate(updates: any) {
+// 处理属性面板更新 - 视频/图片
+function handleVideoPropertyUpdate(updates: Partial<VideoTrackClip>) {
   if (selectedId.value) {
-    updateElement(selectedId.value, updates)
+    updateVideoClip(selectedId.value, updates)
+  }
+}
+
+// 处理属性面板更新 - 字幕
+function handleSubtitlePropertyUpdate(updates: Partial<SubtitleTrackClip>) {
+  if (selectedId.value) {
+    updateSubtitleClip(selectedId.value, updates)
   }
 }
 
 // 处理画布选择
 function handleCanvasSelect(id: string | null) {
-  selectedId.value = id
+  selectClip(id)
 }
 
-// 处理画布更新
-function handleCanvasUpdate(id: string, updates: any) {
-  updateElement(id, updates)
+// 处理画布更新 - 视频/图片
+function handleCanvasUpdateVideo(id: string, updates: Partial<VideoTrackClip>) {
+  updateVideoClip(id, updates)
 }
 
-// 处理图层重排序
-function handleReorderLayers(newLayerElements: any[]) {
-  // 根据新的图层顺序，从完整元素数组中找到对应的元素
-  const reorderedElements = newLayerElements.map((layerEl) => {
-    return elements.value.find(el => el.id === layerEl.id)
-  }).filter(Boolean) as any[]
-
-  reorderLayers(reorderedElements)
+// 处理画布更新 - 字幕
+function handleCanvasUpdateSubtitle(id: string, updates: Partial<SubtitleTrackClip>) {
+  updateSubtitleClip(id, updates)
 }
 
 // 清空画布
@@ -188,12 +198,9 @@ async function handleSaveConfirm() {
     let hasTaintedCanvas = false
 
     try {
-      // exportToDataURL 现在是异步的，需要 await
       const dataURL = await canvasEditorRef.value?.exportToDataURL()
       if (dataURL) {
-        // 将 DataURL 转换为 Blob
         const blob = await dataURLToBlob(dataURL)
-        // 上传缩略图
         const uploadData = await uploadBlobApi(
           blob,
           `template-${Date.now()}.png`,
@@ -208,27 +215,22 @@ async function handleSaveConfirm() {
       hasTaintedCanvas = true
     }
 
-    // 如果无法生成缩略图，提示用户
     if (hasTaintedCanvas) {
       ElMessage.warning("缩略图生成失败，模板将保存但不含预览图")
     }
 
-    // 2. 保存模板数据
+    // 2. 保存模板数据（画布尺寸已包含在 content.FECanvas 中）
     const templateData = {
       name: saveForm.name,
       folder_id: saveForm.folder_id,
-      canvas_width: stageSize.width,
-      canvas_height: stageSize.height,
       content: JSON.stringify(json),
       thumbnail: thumbnailUrl
     }
 
     if (currentTemplateId.value) {
-      // 更新现有模板
       await updateTemplateApi(currentTemplateId.value, templateData)
       ElMessage.success("模板更新成功")
     } else {
-      // 创建新模板
       const { data } = await createTemplateApi(templateData)
       currentTemplateId.value = data.id
       ElMessage.success("模板保存成功")
@@ -236,8 +238,8 @@ async function handleSaveConfirm() {
 
     currentTemplateName.value = saveForm.name
     saveDialogVisible.value = false
-  } catch (error: any) {
-    ElMessage.error(error.message || "保存失败")
+  } catch (error) {
+    console.error("保存失败:", error)
   } finally {
     isSaving.value = false
   }
@@ -294,8 +296,8 @@ async function confirmInlineFolderCreation() {
     // 重置状态
     isCreatingFolder.value = false
     newFolderName.value = ""
-  } catch (error: any) {
-    ElMessage.error(error.message || "创建文件夹失败")
+  } catch (error) {
+    console.error("创建文件夹失败:", error)
   }
 }
 
@@ -307,13 +309,12 @@ async function loadTemplateFromRoute() {
       const { data } = await getTemplateDetailApi(Number(templateId))
       currentTemplateId.value = data.id
       currentTemplateName.value = data.name
-      saveForm.folder_id = data.folder_id // 保存原文件夹ID
+      saveForm.folder_id = data.folder_id
 
       // 加载模板内容
       const templateContent = JSON.parse(data.content)
       loadFromJSON(templateContent)
     } catch (error) {
-      ElMessage.error("模板加载失败")
       console.error("加载模板失败:", error)
     }
   }
@@ -323,17 +324,6 @@ async function loadTemplateFromRoute() {
 function handleBack() {
   router.push({ name: "TemplateManage" })
 }
-
-// 转换元素格式供图层面板使用 - 传递必要的显示字段
-const layerElements = computed(() => {
-  return elements.value.map(el => ({
-    id: el.id,
-    type: el.type,
-    name: el.name,
-    text: el.text, // 文本元素的文字内容
-    imageUrl: el.imageUrl // 图片元素的URL
-  }))
-})
 
 // 页面标题
 const pageTitle = computed(() => {
@@ -388,11 +378,13 @@ onMounted(() => {
           </el-tab-pane>
           <el-tab-pane label="图层" name="layers">
             <LayerPanel
-              :elements="layerElements"
-              :active-object-id="selectedId"
-              @select-element="selectElement"
-              @delete-element="deleteElement"
-              @reorder-layers="handleReorderLayers"
+              :video-clips="videoClips"
+              :subtitle-clips="subtitleClips"
+              :active-clip-id="selectedId"
+              @select-clip="selectClip"
+              @delete-clip="deleteClip"
+              @reorder-video-clips="reorderVideoClips"
+              @reorder-subtitle-clips="reorderSubtitleClips"
             />
           </el-tab-pane>
         </el-tabs>
@@ -403,11 +395,12 @@ onMounted(() => {
         <div class="canvas-container">
           <CanvasEditorKonva
             ref="canvasEditorRef"
-            :elements="elements"
+            :visual-clips="visualClips"
             :selected-id="selectedId"
             :stage-size="stageSize"
             @select="handleCanvasSelect"
-            @update="handleCanvasUpdate"
+            @update-video="handleCanvasUpdateVideo"
+            @update-subtitle="handleCanvasUpdateSubtitle"
           />
         </div>
       </div>
@@ -415,8 +408,10 @@ onMounted(() => {
       <!-- 右侧：属性面板 -->
       <div class="editor-sidebar right">
         <PropertyPanelKonva
-          :element="activeElement"
-          @update="handlePropertyUpdate"
+          :clip="activeClip"
+          :clip-type="activeClipType"
+          @update-video="handleVideoPropertyUpdate"
+          @update-subtitle="handleSubtitlePropertyUpdate"
         />
       </div>
     </div>
@@ -539,7 +534,7 @@ onMounted(() => {
         padding: 0;
         background: #fafafa;
         border-bottom: 1px solid #e8e8e8;
-        order: -1; // 强制 header 在上面
+        order: -1;
         flex-shrink: 0;
       }
 
@@ -554,7 +549,7 @@ onMounted(() => {
         flex: 1;
         overflow-y: auto;
         padding: 16px;
-        order: 1; // 内容在下面
+        order: 1;
       }
 
       .el-tab-pane {
@@ -565,7 +560,7 @@ onMounted(() => {
 
   &.right {
     width: 300px;
-    padding-top: 0; // 确保顶部对齐
+    padding-top: 0;
   }
 }
 

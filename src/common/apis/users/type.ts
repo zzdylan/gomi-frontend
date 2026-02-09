@@ -74,7 +74,7 @@ export type BatchDeleteUserResponseData = ApiResponseData<null>
 /** 用户套餐信息 */
 export interface UserPackageInfo {
   id: number
-  aid: number
+  tenant_id: number
   user_id: number
   package_id: number
   package_name: string
@@ -90,7 +90,7 @@ export interface UserPackageInfo {
 /** 权益类型信息 */
 export interface BenefitInfo {
   id: number
-  aid: number
+  tenant_id: number
   product_id: number
   name: string
   code: string
@@ -101,7 +101,7 @@ export interface BenefitInfo {
 /** 用户权益信息 */
 export interface UserBenefitInfo {
   id: number
-  aid: number
+  tenant_id: number
   user_id: number
   product_id: number
   order_id: number

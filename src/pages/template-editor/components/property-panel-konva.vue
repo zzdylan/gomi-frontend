@@ -1,70 +1,106 @@
 <script setup lang="ts">
-import type { KonvaElement } from "@@/composables/useKonva"
+import type { AnyClip, SubtitleTrackClip, VideoTrackClip } from "@/types/timeline"
 
 const props = defineProps<{
-  element: KonvaElement | null
+  clip: AnyClip | null
+  clipType: "video" | "image" | "text" | "audio" | null
 }>()
 
 const emit = defineEmits<{
-  update: [updates: Partial<KonvaElement>]
+  updateVideo: [updates: Partial<VideoTrackClip>]
+  updateSubtitle: [updates: Partial<SubtitleTrackClip>]
 }>()
 
-// 直接更新属性，因为是响应式的
-function updateProp<K extends keyof KonvaElement>(key: K, value: KonvaElement[K]) {
-  emit("update", { [key]: value })
+// 判断是否是视频/图片素材
+const isVideoClip = computed(() => {
+  return props.clipType === "video" || props.clipType === "image"
+})
+
+// 判断是否是字幕素材
+const isSubtitleClip = computed(() => {
+  return props.clipType === "text"
+})
+
+// 获取视频/图片素材
+const videoClip = computed(() => {
+  if (!isVideoClip.value || !props.clip) return null
+  return props.clip as VideoTrackClip
+})
+
+// 获取字幕素材
+const subtitleClip = computed(() => {
+  if (!isSubtitleClip.value || !props.clip) return null
+  return props.clip as SubtitleTrackClip
+})
+
+// 更新视频/图片属性
+function updateVideoProp<K extends keyof VideoTrackClip>(key: K, value: VideoTrackClip[K]) {
+  emit("updateVideo", { [key]: value })
 }
 
-function handleRotationChange(value: number | number[]) {
-  const angle = Array.isArray(value) ? value[0] : value
-  updateProp("rotation", angle)
+// 更新字幕属性
+function updateSubtitleProp<K extends keyof SubtitleTrackClip>(key: K, value: SubtitleTrackClip[K]) {
+  emit("updateSubtitle", { [key]: value })
 }
 
-function handleOpacityChange(value: number | number[]) {
+// 处理透明度变化（视频/图片）
+function handleVideoOpacityChange(value: number | number[]) {
   const opacity = Array.isArray(value) ? value[0] : value
-  updateProp("opacity", opacity / 100)
+  updateVideoProp("Opacity", opacity / 100)
 }
 
-// 更新动画设置
-function updateAnimation(key: "in" | "out" | "inDuration" | "outDuration", value: any) {
-  if (!props.element) return
+// 处理透明度变化（字幕）
+function handleSubtitleOpacityChange(value: number | number[]) {
+  const opacity = Array.isArray(value) ? value[0] : value
+  updateSubtitleProp("FontColorOpacity", opacity / 100)
+}
 
-  const currentAnimation = props.element.animation || {
-    in: "fade",
-    out: "fade",
-    inDuration: 0.5,
-    outDuration: 0.5
+// 处理旋转变化（字幕）
+function handleAngleChange(value: number | number[]) {
+  const angle = Array.isArray(value) ? value[0] : value
+  updateSubtitleProp("Angle", angle)
+}
+
+// 更新字体样式
+function updateFontFace(key: "Bold" | "Italic" | "Underline", value: boolean) {
+  if (!subtitleClip.value) return
+
+  const currentFontFace = subtitleClip.value.FontFace || {
+    Bold: false,
+    Italic: false,
+    Underline: false
   }
 
-  emit("update", {
-    animation: {
-      ...currentAnimation,
+  emit("updateSubtitle", {
+    FontFace: {
+      ...currentFontFace,
       [key]: value
     }
   })
 }
 
 // 更新时间轴设置
-function updateTimeline(key: "startTime" | "duration", value: number) {
-  if (!props.element) return
-
-  const currentTimeline = props.element.timeline || {
-    startTime: 0,
-    duration: 3,
-    endTime: 3
+function updateTimeline(key: "TimelineIn" | "TimelineOut", value: number) {
+  if (isVideoClip.value) {
+    updateVideoProp(key, value)
+  } else if (isSubtitleClip.value) {
+    updateSubtitleProp(key, value)
   }
-
-  const newTimeline = {
-    ...currentTimeline,
-    [key]: value
-  }
-
-  // 自动计算 endTime
-  newTimeline.endTime = newTimeline.startTime + newTimeline.duration
-
-  emit("update", {
-    timeline: newTimeline
-  })
 }
+
+// 更新动画设置（字幕）
+function updateMotion(key: "AaiMotionInEffect" | "AaiMotionIn" | "AaiMotionOutEffect" | "AaiMotionOut", value: any) {
+  updateSubtitleProp(key, value)
+}
+
+// 计算持续时长
+const duration = computed(() => {
+  if (!props.clip) return 0
+  const clip = props.clip as any
+  const timelineIn = clip.TimelineIn ?? 0
+  const timelineOut = clip.TimelineOut ?? 3
+  return timelineOut - timelineIn
+})
 </script>
 
 <template>
@@ -73,280 +109,352 @@ function updateTimeline(key: "startTime" | "duration", value: number) {
       <span class="panel-title">属性设置</span>
     </div>
 
-    <div v-if="!element" class="empty-state">
+    <div v-if="!clip" class="empty-state">
       <el-empty description="请选择一个元素" :image-size="80" />
     </div>
 
     <div v-else class="property-content">
-      <!-- 基础属性 -->
-      <div class="property-section">
-        <div class="section-title">
-          基础属性
+      <!-- 视频/图片属性 -->
+      <template v-if="isVideoClip && videoClip">
+        <div class="property-section">
+          <div class="section-title">
+            基础属性
+          </div>
+
+          <el-form label-width="60px" size="small">
+            <el-form-item label="X 坐标">
+              <el-input-number
+                :model-value="videoClip.X ?? 0"
+                :step="1"
+                size="small"
+                @update:model-value="updateVideoProp('X', $event!)"
+              />
+            </el-form-item>
+
+            <el-form-item label="Y 坐标">
+              <el-input-number
+                :model-value="videoClip.Y ?? 0"
+                :step="1"
+                size="small"
+                @update:model-value="updateVideoProp('Y', $event!)"
+              />
+            </el-form-item>
+
+            <el-form-item label="宽度">
+              <el-input-number
+                :model-value="videoClip.Width"
+                :step="1"
+                :min="1"
+                size="small"
+                @update:model-value="updateVideoProp('Width', $event!)"
+              />
+            </el-form-item>
+
+            <el-form-item label="高度">
+              <el-input-number
+                :model-value="videoClip.Height"
+                :step="1"
+                :min="1"
+                size="small"
+                @update:model-value="updateVideoProp('Height', $event!)"
+              />
+            </el-form-item>
+
+            <el-form-item label="透明度">
+              <el-slider
+                :model-value="(videoClip.Opacity ?? 1) * 100"
+                :min="0"
+                :max="100"
+                @update:model-value="handleVideoOpacityChange"
+              />
+            </el-form-item>
+          </el-form>
         </div>
 
-        <el-form label-width="60px" size="small">
-          <el-form-item label="X 坐标">
-            <el-input-number
-              :model-value="element.x"
-              :step="1"
-              size="small"
-              @update:model-value="updateProp('x', $event!)"
-            />
-          </el-form-item>
+        <!-- 时间轴设置 -->
+        <div class="property-section">
+          <div class="section-title">
+            时间轴设置
+          </div>
 
-          <el-form-item label="Y 坐标">
-            <el-input-number
-              :model-value="element.y"
-              :step="1"
-              size="small"
-              @update:model-value="updateProp('y', $event!)"
-            />
-          </el-form-item>
+          <el-form label-width="80px" size="small">
+            <el-form-item label="入场时间">
+              <el-input-number
+                :model-value="videoClip.TimelineIn ?? 0"
+                :step="0.1"
+                :min="0"
+                :precision="1"
+                @update:model-value="updateTimeline('TimelineIn', $event!)"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
 
-          <el-form-item v-if="element.type === 'text'" label="宽度">
-            <el-input-number
-              :model-value="element.width"
-              :step="1"
-              :min="20"
-              size="small"
-              @update:model-value="updateProp('width', $event!)"
-            />
-          </el-form-item>
+            <el-form-item label="出场时间">
+              <el-input-number
+                :model-value="videoClip.TimelineOut ?? 3"
+                :step="0.1"
+                :min="0.1"
+                :precision="1"
+                @update:model-value="updateTimeline('TimelineOut', $event!)"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
 
-          <el-form-item label="旋转">
-            <el-slider
-              :model-value="element.rotation || 0"
-              :min="0"
-              :max="360"
-              @update:model-value="handleRotationChange"
-            />
-          </el-form-item>
+            <el-form-item label="持续时长">
+              <el-input-number
+                :model-value="duration"
+                disabled
+                :precision="1"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
+          </el-form>
+        </div>
+      </template>
 
-          <el-form-item label="透明度">
-            <el-slider
-              :model-value="(element.opacity || 1) * 100"
-              :min="0"
-              :max="100"
-              @update:model-value="handleOpacityChange"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
+      <!-- 字幕属性 -->
+      <template v-if="isSubtitleClip && subtitleClip">
+        <div class="property-section">
+          <div class="section-title">
+            基础属性
+          </div>
 
-      <!-- 文本属性 -->
-      <div v-if="element.type === 'text'" class="property-section">
-        <div class="section-title">
-          文本属性
+          <el-form label-width="60px" size="small">
+            <el-form-item label="X 坐标">
+              <el-input-number
+                :model-value="subtitleClip.X ?? 0"
+                :step="1"
+                size="small"
+                @update:model-value="updateSubtitleProp('X', $event!)"
+              />
+            </el-form-item>
+
+            <el-form-item label="Y 坐标">
+              <el-input-number
+                :model-value="subtitleClip.Y ?? 0"
+                :step="1"
+                size="small"
+                @update:model-value="updateSubtitleProp('Y', $event!)"
+              />
+            </el-form-item>
+
+            <el-form-item label="旋转">
+              <el-slider
+                :model-value="subtitleClip.Angle ?? 0"
+                :min="0"
+                :max="360"
+                @update:model-value="handleAngleChange"
+              />
+            </el-form-item>
+
+            <el-form-item label="透明度">
+              <el-slider
+                :model-value="(subtitleClip.FontColorOpacity ?? 1) * 100"
+                :min="0"
+                :max="100"
+                @update:model-value="handleSubtitleOpacityChange"
+              />
+            </el-form-item>
+          </el-form>
         </div>
 
-        <el-form label-width="60px" size="small">
-          <el-form-item label="文本">
-            <el-input
-              :model-value="element.text"
-              type="textarea"
-              :rows="3"
-              @update:model-value="updateProp('text', $event)"
-            />
-          </el-form-item>
+        <!-- 文本属性 -->
+        <div class="property-section">
+          <div class="section-title">
+            文本属性
+          </div>
 
-          <el-form-item label="字号">
-            <el-input-number
-              :model-value="element.fontSize"
-              :step="1"
-              :min="12"
-              :max="100"
-              size="small"
-              @update:model-value="updateProp('fontSize', $event!)"
-            />
-          </el-form-item>
+          <el-form label-width="60px" size="small">
+            <el-form-item label="文本">
+              <el-input
+                :model-value="subtitleClip.Content"
+                type="textarea"
+                :rows="3"
+                @update:model-value="updateSubtitleProp('Content', $event)"
+              />
+            </el-form-item>
 
-          <el-form-item label="颜色">
-            <el-color-picker
-              :model-value="element.fill"
-              @update:model-value="updateProp('fill', $event!)"
-            />
-          </el-form-item>
+            <el-form-item label="字号">
+              <el-input-number
+                :model-value="subtitleClip.FontSize ?? 24"
+                :step="1"
+                :min="12"
+                :max="100"
+                size="small"
+                @update:model-value="updateSubtitleProp('FontSize', $event!)"
+              />
+            </el-form-item>
 
-          <el-form-item label="样式">
-            <el-checkbox
-              :model-value="element.fontWeight === 'bold'"
-              @update:model-value="updateProp('fontWeight', $event ? 'bold' : 'normal')"
-            >
-              <b>加粗</b>
-            </el-checkbox>
-            <el-checkbox
-              :model-value="element.fontStyle === 'italic'"
-              @update:model-value="updateProp('fontStyle', $event ? 'italic' : 'normal')"
-            >
-              <i>斜体</i>
-            </el-checkbox>
-            <el-checkbox
-              :model-value="element.textDecoration === 'underline'"
-              @update:model-value="updateProp('textDecoration', $event ? 'underline' : 'none')"
-            >
-              <u>下划线</u>
-            </el-checkbox>
-          </el-form-item>
+            <el-form-item label="颜色">
+              <el-color-picker
+                :model-value="subtitleClip.FontColor ?? '#1f2937'"
+                @update:model-value="updateSubtitleProp('FontColor', $event!)"
+              />
+            </el-form-item>
 
-          <el-form-item label="对齐">
-            <el-radio-group
-              :model-value="element.textAlign || 'left'"
-              size="small"
-              @update:model-value="updateProp('textAlign', $event as string)"
-            >
-              <el-radio-button value="left">
-                左
-              </el-radio-button>
-              <el-radio-button value="center">
-                中
-              </el-radio-button>
-              <el-radio-button value="right">
-                右
-              </el-radio-button>
-            </el-radio-group>
-          </el-form-item>
+            <el-form-item label="样式">
+              <el-checkbox
+                :model-value="subtitleClip.FontFace?.Bold ?? false"
+                @update:model-value="updateFontFace('Bold', $event as boolean)"
+              >
+                <b>加粗</b>
+              </el-checkbox>
+              <el-checkbox
+                :model-value="subtitleClip.FontFace?.Italic ?? false"
+                @update:model-value="updateFontFace('Italic', $event as boolean)"
+              >
+                <i>斜体</i>
+              </el-checkbox>
+              <el-checkbox
+                :model-value="subtitleClip.FontFace?.Underline ?? false"
+                @update:model-value="updateFontFace('Underline', $event as boolean)"
+              >
+                <u>下划线</u>
+              </el-checkbox>
+            </el-form-item>
 
-          <el-form-item label="字体">
-            <el-select
-              :model-value="element.fontFamily || 'Arial'"
-              @update:model-value="updateProp('fontFamily', $event)"
-            >
-              <el-option label="Arial" value="Arial" />
-              <el-option label="微软雅黑" value="Microsoft YaHei, sans-serif" />
-              <el-option label="苹方" value="PingFang SC, sans-serif" />
-              <el-option label="宋体" value="SimSun, serif" />
-              <el-option label="黑体" value="SimHei, sans-serif" />
-              <el-option label="楷体" value="KaiTi, serif" />
-              <el-option label="系统默认" value="system-ui, sans-serif" />
-              <el-option label="Times New Roman" value="Times New Roman, serif" />
-              <el-option label="Courier New" value="Courier New, monospace" />
-            </el-select>
-          </el-form-item>
+            <el-form-item label="对齐">
+              <el-radio-group
+                :model-value="subtitleClip.Alignment ?? 'left'"
+                size="small"
+                @update:model-value="updateSubtitleProp('Alignment', $event as string)"
+              >
+                <el-radio-button value="left">
+                  左
+                </el-radio-button>
+                <el-radio-button value="center">
+                  中
+                </el-radio-button>
+                <el-radio-button value="right">
+                  右
+                </el-radio-button>
+              </el-radio-group>
+            </el-form-item>
 
-          <el-form-item label="描边颜色">
-            <el-color-picker
-              :model-value="element.stroke || '#000000'"
-              @update:model-value="updateProp('stroke', $event!)"
-            />
-          </el-form-item>
-
-          <el-form-item label="描边宽度">
-            <el-input-number
-              :model-value="element.strokeWidth || 0"
-              :step="1"
-              :min="0"
-              :max="20"
-              size="small"
-              @update:model-value="updateProp('strokeWidth', $event!)"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 动画设置 -->
-      <div class="property-section">
-        <div class="section-title">
-          动画设置
+            <el-form-item label="字体">
+              <el-select
+                :model-value="subtitleClip.Font || 'Arial'"
+                @update:model-value="updateSubtitleProp('Font', $event)"
+              >
+                <el-option label="Arial" value="Arial" />
+                <el-option label="微软雅黑" value="Microsoft YaHei, sans-serif" />
+                <el-option label="苹方" value="PingFang SC, sans-serif" />
+                <el-option label="宋体" value="SimSun, serif" />
+                <el-option label="黑体" value="SimHei, sans-serif" />
+                <el-option label="楷体" value="KaiTi, serif" />
+                <el-option label="系统默认" value="system-ui, sans-serif" />
+                <el-option label="Times New Roman" value="Times New Roman, serif" />
+                <el-option label="Courier New" value="Courier New, monospace" />
+              </el-select>
+            </el-form-item>
+          </el-form>
         </div>
 
-        <el-form label-width="80px" size="small">
-          <el-form-item label="入场动画">
-            <el-select
-              :model-value="element.animation?.in || 'fade'"
-              @update:model-value="updateAnimation('in', $event)"
-            >
-              <el-option label="无" value="none" />
-              <el-option label="淡入" value="fade" />
-              <el-option label="从左滑入" value="slide-left" />
-              <el-option label="从右滑入" value="slide-right" />
-              <el-option label="从上滑入" value="slide-up" />
-              <el-option label="从下滑入" value="slide-down" />
-              <el-option label="缩放" value="zoom" />
-              <el-option label="弹跳" value="bounce" />
-            </el-select>
-          </el-form-item>
+        <!-- 动画设置 -->
+        <div class="property-section">
+          <div class="section-title">
+            动画设置
+          </div>
 
-          <el-form-item label="入场时长">
-            <el-input-number
-              :model-value="element.animation?.inDuration || 0.5"
-              :step="0.1"
-              :min="0"
-              :max="5"
-              :precision="1"
-              @update:model-value="updateAnimation('inDuration', $event!)"
-            />
-            <span style="margin-left: 8px">秒</span>
-          </el-form-item>
+          <el-form label-width="80px" size="small">
+            <el-form-item label="入场动画">
+              <el-select
+                :model-value="subtitleClip.AaiMotionInEffect || ''"
+                @update:model-value="updateMotion('AaiMotionInEffect', $event)"
+              >
+                <el-option label="无" value="" />
+                <el-option label="淡入" value="fade" />
+                <el-option label="从左滑入" value="slide-left" />
+                <el-option label="从右滑入" value="slide-right" />
+                <el-option label="从上滑入" value="slide-up" />
+                <el-option label="从下滑入" value="slide-down" />
+                <el-option label="缩放" value="zoom" />
+                <el-option label="弹跳" value="bounce" />
+              </el-select>
+            </el-form-item>
 
-          <el-form-item label="出场动画">
-            <el-select
-              :model-value="element.animation?.out || 'fade'"
-              @update:model-value="updateAnimation('out', $event)"
-            >
-              <el-option label="无" value="none" />
-              <el-option label="淡出" value="fade" />
-              <el-option label="向左滑出" value="slide-left" />
-              <el-option label="向右滑出" value="slide-right" />
-              <el-option label="向上滑出" value="slide-up" />
-              <el-option label="向下滑出" value="slide-down" />
-              <el-option label="缩放" value="zoom" />
-              <el-option label="弹跳" value="bounce" />
-            </el-select>
-          </el-form-item>
+            <el-form-item label="入场时长">
+              <el-input-number
+                :model-value="subtitleClip.AaiMotionIn ?? 0.5"
+                :step="0.1"
+                :min="0"
+                :max="5"
+                :precision="1"
+                @update:model-value="updateMotion('AaiMotionIn', $event!)"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
 
-          <el-form-item label="出场时长">
-            <el-input-number
-              :model-value="element.animation?.outDuration || 0.5"
-              :step="0.1"
-              :min="0"
-              :max="5"
-              :precision="1"
-              @update:model-value="updateAnimation('outDuration', $event!)"
-            />
-            <span style="margin-left: 8px">秒</span>
-          </el-form-item>
-        </el-form>
-      </div>
+            <el-form-item label="出场动画">
+              <el-select
+                :model-value="subtitleClip.AaiMotionOutEffect || ''"
+                @update:model-value="updateMotion('AaiMotionOutEffect', $event)"
+              >
+                <el-option label="无" value="" />
+                <el-option label="淡出" value="fade" />
+                <el-option label="向左滑出" value="slide-left" />
+                <el-option label="向右滑出" value="slide-right" />
+                <el-option label="向上滑出" value="slide-up" />
+                <el-option label="向下滑出" value="slide-down" />
+                <el-option label="缩放" value="zoom" />
+                <el-option label="弹跳" value="bounce" />
+              </el-select>
+            </el-form-item>
 
-      <!-- 时间轴设置 -->
-      <div class="property-section">
-        <div class="section-title">
-          时间轴设置
+            <el-form-item label="出场时长">
+              <el-input-number
+                :model-value="subtitleClip.AaiMotionOut ?? 0.5"
+                :step="0.1"
+                :min="0"
+                :max="5"
+                :precision="1"
+                @update:model-value="updateMotion('AaiMotionOut', $event!)"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
+          </el-form>
         </div>
 
-        <el-form label-width="80px" size="small">
-          <el-form-item label="入场时间">
-            <el-input-number
-              :model-value="element.timeline?.startTime || 0"
-              :step="0.1"
-              :min="0"
-              :precision="1"
-              @update:model-value="updateTimeline('startTime', $event!)"
-            />
-            <span style="margin-left: 8px">秒</span>
-          </el-form-item>
+        <!-- 时间轴设置 -->
+        <div class="property-section">
+          <div class="section-title">
+            时间轴设置
+          </div>
 
-          <el-form-item label="持续时间">
-            <el-input-number
-              :model-value="element.timeline?.duration || 3"
-              :step="0.1"
-              :min="0.1"
-              :precision="1"
-              @update:model-value="updateTimeline('duration', $event!)"
-            />
-            <span style="margin-left: 8px">秒</span>
-          </el-form-item>
+          <el-form label-width="80px" size="small">
+            <el-form-item label="入场时间">
+              <el-input-number
+                :model-value="subtitleClip.TimelineIn ?? 0"
+                :step="0.1"
+                :min="0"
+                :precision="1"
+                @update:model-value="updateTimeline('TimelineIn', $event!)"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
 
-          <el-form-item label="出场时间">
-            <el-input-number
-              :model-value="(element.timeline?.startTime || 0) + (element.timeline?.duration || 3)"
-              disabled
-              :precision="1"
-            />
-            <span style="margin-left: 8px">秒</span>
-          </el-form-item>
-        </el-form>
-      </div>
+            <el-form-item label="出场时间">
+              <el-input-number
+                :model-value="subtitleClip.TimelineOut ?? 3"
+                :step="0.1"
+                :min="0.1"
+                :precision="1"
+                @update:model-value="updateTimeline('TimelineOut', $event!)"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
+
+            <el-form-item label="持续时长">
+              <el-input-number
+                :model-value="duration"
+                disabled
+                :precision="1"
+              />
+              <span style="margin-left: 8px">秒</span>
+            </el-form-item>
+          </el-form>
+        </div>
+      </template>
     </div>
   </div>
 </template>

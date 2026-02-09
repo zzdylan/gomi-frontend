@@ -277,8 +277,8 @@ async function generateSmart() {
         router.push({ name: "CopyLibraryList" })
       }, 1500)
     }
-  } catch (error: any) {
-    ElMessage.error(error.message || "生成失败")
+  } catch (error) {
+    console.error("生成失败:", error)
   }
 }
 
@@ -314,7 +314,6 @@ async function loadCopyLibrary(id: number) {
     xGridDom.value?.commitProxy("query")
   } catch (error) {
     console.error("加载文案库失败:", error)
-    ElMessage.error("加载文案库失败")
   }
 }
 

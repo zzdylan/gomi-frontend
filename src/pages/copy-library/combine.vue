@@ -378,7 +378,6 @@ async function handleSubmit() {
     ElMessage.success(`${data.message}，共创建 ${data.words_count} 条文案`)
   } catch (error) {
     console.error("提交错误:", error)
-    ElMessage.error("提交失败，请稍后重试")
   } finally {
     submitting.value = false
   }
@@ -450,7 +449,6 @@ async function loadCopyLibrary(id: number) {
     }
   } catch (error) {
     console.error("加载文案库失败:", error)
-    ElMessage.error("加载文案库失败")
   }
 }
 

@@ -15,9 +15,7 @@ export interface TemplateItem {
   folder_id: number
   name: string
   thumbnail: string
-  canvas_width: number
-  canvas_height: number
-  content: string
+  content: string // 画布尺寸在 content.FECanvas 中
   created_at: string
   updated_at: string
 }
@@ -44,18 +42,14 @@ export interface CreateTemplateRequestData {
   folder_id: number
   name: string
   thumbnail?: string
-  canvas_width: number
-  canvas_height: number
-  content: string
+  content: string // 画布尺寸在 content.FECanvas 中
 }
 
 /** 更新模板请求数据 */
 export interface UpdateTemplateRequestData {
   name: string
   thumbnail?: string
-  canvas_width?: number
-  canvas_height?: number
-  content?: string
+  content?: string // 画布尺寸在 content.FECanvas 中
 }
 
 /** 批量删除模板请求数据 */

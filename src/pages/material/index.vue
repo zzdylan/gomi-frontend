@@ -128,14 +128,10 @@ function handleDeleteFolder(folder: MaterialFolderItem) {
     confirmButtonText: "确定",
     cancelButtonText: "取消"
   }).then(async () => {
-    try {
-      await deleteMaterialFolderApi(folder.id)
-      ElMessage.success("删除成功")
-      loadFolders(currentFolderId.value)
-    } catch (error: any) {
-      ElMessage.error(error.message || "删除失败")
-    }
-  })
+    await deleteMaterialFolderApi(folder.id)
+    ElMessage.success("删除成功")
+    loadFolders(currentFolderId.value)
+  }).catch(() => {})
 }
 
 // ==================== 素材管理 ====================
@@ -211,16 +207,12 @@ function handleBatchDelete() {
   ElMessageBox.confirm(`确定删除选中的 ${selectedMaterials.value.length} 个素材吗？`, "提示", {
     type: "warning"
   }).then(async () => {
-    try {
-      const ids = selectedMaterials.value.map(m => m.id)
-      await batchDeleteMaterialApi({ ids })
-      ElMessage.success("删除成功")
-      selectedMaterials.value = []
-      loadMaterials()
-    } catch (error: any) {
-      ElMessage.error(error.message || "删除失败")
-    }
-  })
+    const ids = selectedMaterials.value.map(m => m.id)
+    await batchDeleteMaterialApi({ ids })
+    ElMessage.success("删除成功")
+    selectedMaterials.value = []
+    loadMaterials()
+  }).catch(() => {})
 }
 
 // 移动素材
@@ -251,16 +243,12 @@ function handleShowMoveDialog() {
 }
 
 async function handleMoveSubmit() {
-  try {
-    const ids = selectedMaterials.value.map(m => m.id)
-    await moveMaterialApi({ ids, folder_id: moveTargetFolderId.value })
-    ElMessage.success("移动成功")
-    moveDialogVisible.value = false
-    selectedMaterials.value = []
-    loadMaterials()
-  } catch (error: any) {
-    ElMessage.error(error.message || "移动失败")
-  }
+  const ids = selectedMaterials.value.map(m => m.id)
+  await moveMaterialApi({ ids, folder_id: moveTargetFolderId.value })
+  ElMessage.success("移动成功")
+  moveDialogVisible.value = false
+  selectedMaterials.value = []
+  loadMaterials()
 }
 
 // 选择/取消选择素材

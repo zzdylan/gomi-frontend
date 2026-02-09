@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import type { KonvaElement } from "@@/composables/useKonva"
+import type { SubtitleTrackClip, VideoTrackClip, VisualClip } from "@/types/timeline"
 
 const props = defineProps<{
-  elements: KonvaElement[]
+  visualClips: VisualClip[]
   selectedId: string | null
   stageSize: { width: number, height: number }
 }>()
 
 const emit = defineEmits<{
   select: [id: string | null]
-  update: [id: string, updates: Partial<KonvaElement>]
+  updateVideo: [id: string, updates: Partial<VideoTrackClip>]
+  updateSubtitle: [id: string, updates: Partial<SubtitleTrackClip>]
 }>()
 
 const stageRef = ref<any>(null)
@@ -20,17 +21,17 @@ const editingTextId = ref<string | null>(null)
 // 图片缓存：存储已加载的图片对象
 const imageCache = ref<Map<string, HTMLImageElement>>(new Map())
 
-// 判断图片是否跨域
-function isCrossOrigin(url: string): boolean {
-  try {
-    const imageUrl = new URL(url, window.location.href)
-    return imageUrl.origin !== window.location.origin
-  } catch {
-    return false
-  }
+// 判断是否是视频/图片素材
+function isVideoClip(clip: VisualClip): clip is VideoTrackClip {
+  return clip.Type === "Video" || clip.Type === "Image"
 }
 
-// 加载图片（显示用，不设置 crossOrigin）
+// 判断是否是字幕素材
+function isSubtitleClip(clip: VisualClip): clip is SubtitleTrackClip {
+  return clip.Type === "Text"
+}
+
+// 加载图片（显示用）
 function loadImage(url: string): HTMLImageElement | undefined {
   if (imageCache.value.has(url)) {
     return imageCache.value.get(url)
@@ -77,41 +78,70 @@ function loadImageWithCORS(url: string): Promise<HTMLImageElement> {
   })
 }
 
-// 获取图片元素的 config，包含加载的图片对象
-function getImageConfig(element: KonvaElement) {
-  const img = loadImage(element.imageUrl || "")
+// 判断图片是否跨域
+function isCrossOrigin(url: string): boolean {
+  try {
+    const imageUrl = new URL(url, window.location.href)
+    return imageUrl.origin !== window.location.origin
+  } catch {
+    return false
+  }
+}
+
+// 获取图片元素的 config
+function getImageConfig(clip: VideoTrackClip) {
+  const img = loadImage(clip.MediaURL || "")
   return {
-    id: element.id,
-    name: element.id,
-    x: element.x,
-    y: element.y,
-    width: element.width,
-    height: element.height,
-    scaleX: element.scaleX,
-    scaleY: element.scaleY,
-    rotation: element.rotation,
-    opacity: element.opacity,
+    id: clip.Id,
+    name: clip.Id,
+    x: clip.X ?? 0,
+    y: clip.Y ?? 0,
+    width: clip.Width,
+    height: clip.Height,
+    rotation: 0,
+    opacity: clip.Opacity ?? 1,
     draggable: true,
-    image: img // 关键：传递实际的 Image 对象
+    image: img
+  }
+}
+
+// 获取文本元素的 config
+function getTextConfig(clip: SubtitleTrackClip) {
+  return {
+    id: clip.Id,
+    name: clip.Id,
+    x: clip.X ?? 0,
+    y: clip.Y ?? 0,
+    text: clip.Content,
+    fontSize: clip.FontSize ?? 24,
+    fontFamily: clip.Font || "Arial",
+    fill: clip.FontColor ?? "#1f2937",
+    width: 200,
+    align: clip.Alignment ?? "left",
+    fontStyle: `${clip.FontFace?.Italic ? "italic" : "normal"} ${clip.FontFace?.Bold ? "bold" : "normal"}`,
+    textDecoration: clip.FontFace?.Underline ? "underline" : "none",
+    rotation: clip.Angle ?? 0,
+    opacity: clip.FontColorOpacity ?? 1,
+    draggable: true,
+    visible: editingTextId.value !== clip.Id
   }
 }
 
 // 监听选中状态变化，更新 Transformer
-// 这是官方示例的核心逻辑
 watch(() => props.selectedId, () => {
   nextTick(() => {
     updateTransformer()
   })
 })
 
-// 监听元素数量变化，也需要更新 Transformer
-watch(() => props.elements.length, () => {
+// 监听素材数量变化
+watch(() => props.visualClips.length, () => {
   nextTick(() => {
     updateTransformer()
   })
 })
 
-// 更新 Transformer - 基于官方示例
+// 更新 Transformer
 function updateTransformer() {
   if (!transformerRef.value || !stageRef.value) {
     return
@@ -126,16 +156,13 @@ function updateTransformer() {
 
   const { selectedId } = props
 
-  // 如果没有选中，清空 transformer
   if (!selectedId) {
     transformerNode.nodes([])
     return
   }
 
-  // 查找选中的节点（通过 ID）
   const selectedNode = stage.findOne(`#${selectedId}`)
 
-  // 如果找到了节点，绑定 transformer
   if (selectedNode) {
     transformerNode.nodes([selectedNode])
   } else {
@@ -143,21 +170,18 @@ function updateTransformer() {
   }
 }
 
-// 处理舞台点击（取消选中）
+// 处理舞台点击
 function handleStageMouseDown(e: any) {
-  // 点击空白区域
   if (e.target === e.target.getStage()) {
     emit("select", null)
     return
   }
 
-  // 点击 Transformer 上的控制点，不做处理
   const clickedOnTransformer = e.target.getParent().className === "Transformer"
   if (clickedOnTransformer) {
     return
   }
 
-  // 获取点击的元素 ID
   const id = e.target.id()
   if (id) {
     emit("select", id)
@@ -167,49 +191,53 @@ function handleStageMouseDown(e: any) {
 }
 
 // 处理拖拽结束
-function handleDragEnd(id: string, e: any) {
-  emit("update", id, {
-    x: e.target.x(),
-    y: e.target.y()
-  })
+function handleDragEnd(clip: VisualClip, e: any) {
+  const updates = {
+    X: e.target.x(),
+    Y: e.target.y()
+  }
+
+  if (isVideoClip(clip)) {
+    emit("updateVideo", clip.Id!, updates)
+  } else if (isSubtitleClip(clip)) {
+    emit("updateSubtitle", clip.Id!, updates)
+  }
 }
 
-// 处理变换结束（缩放、旋转）- 基于官方示例
-function handleTransformEnd(id: string, e: any) {
+// 处理变换结束（缩放、旋转）
+function handleTransformEnd(clip: VisualClip, e: any) {
   const node = e.target
   const scaleX = node.scaleX()
   const scaleY = node.scaleY()
 
-  const updates: Partial<KonvaElement> = {
-    x: node.x(),
-    y: node.y(),
-    rotation: node.rotation()
-  }
-
-  const element = props.elements.find(el => el.id === id)
-
-  if (element?.type === "text") {
+  if (isSubtitleClip(clip)) {
     // 对于文本，调整宽度和字号
-    updates.width = Math.max(20, node.width() * scaleX)
-    updates.fontSize = Math.max(12, (element.fontSize || 24) * scaleY)
-    // 立即重置节点的 scale，避免跳变
+    const updates: Partial<SubtitleTrackClip> = {
+      X: node.x(),
+      Y: node.y(),
+      Angle: node.rotation(),
+      FontSize: Math.max(12, (clip.FontSize || 24) * scaleY)
+    }
     node.scaleX(1)
     node.scaleY(1)
-  } else if (element?.type === "image") {
-    // 对于图片，保持 scale
-    updates.scaleX = scaleX
-    updates.scaleY = scaleY
+    emit("updateSubtitle", clip.Id!, updates)
+  } else if (isVideoClip(clip)) {
+    // 对于图片/视频，更新尺寸
+    const updates: Partial<VideoTrackClip> = {
+      X: node.x(),
+      Y: node.y(),
+      Width: (clip.Width || 100) * scaleX,
+      Height: (clip.Height || 100) * scaleY
+    }
+    node.scaleX(1)
+    node.scaleY(1)
+    emit("updateVideo", clip.Id!, updates)
   }
-
-  emit("update", id, updates)
 }
 
 // 处理文本双击编辑
-function handleTextDblClick(id: string, e: any) {
+function handleTextDblClick(clip: SubtitleTrackClip, e: any) {
   const textNode = e.target
-  const element = props.elements.find(el => el.id === id)
-
-  if (!element || element.type !== "text") return
 
   // 隐藏 transformer
   const transformerNode = transformerRef.value?.getNode()
@@ -217,13 +245,9 @@ function handleTextDblClick(id: string, e: any) {
     transformerNode.nodes([])
   }
 
-  // 设置编辑状态
-  editingTextId.value = id
-
-  // 隐藏文本节点
+  editingTextId.value = clip.Id!
   textNode.hide()
 
-  // 等待 DOM 更新后聚焦 textarea
   nextTick(() => {
     textEditorRef.value?.focus()
     textEditorRef.value?.select()
@@ -234,42 +258,45 @@ function handleTextDblClick(id: string, e: any) {
 function finishTextEdit() {
   if (!editingTextId.value) return
 
-  const element = props.elements.find(el => el.id === editingTextId.value)
-  if (!element) return
+  const clip = props.visualClips.find(c => c.Id === editingTextId.value) as SubtitleTrackClip
+  if (!clip) return
 
-  // 更新文本内容
-  const newText = textEditorRef.value?.value || element.text
-  emit("update", editingTextId.value, { text: newText })
+  const newText = textEditorRef.value?.value || clip.Content
+  emit("updateSubtitle", editingTextId.value, { Content: newText })
 
-  // 清除编辑状态
   editingTextId.value = null
 
-  // 重新选中文本
   nextTick(() => {
     updateTransformer()
   })
 }
 
-// 导出舞台为图片（使用 CORS 模式重新加载图片）
+// 获取正在编辑的文本素材
+const editingTextClip = computed(() => {
+  if (!editingTextId.value) return null
+  return props.visualClips.find(c => c.Id === editingTextId.value) as SubtitleTrackClip | null
+})
+
+// 导出舞台为图片
 async function exportToDataURL(): Promise<string | null> {
   if (!stageRef.value) return null
 
   try {
-    // 1. 收集所有跨域图片 URL
+    // 收集所有跨域图片 URL
     const crossOriginImageUrls = new Set<string>()
-    props.elements.forEach((el) => {
-      if (el.type === "image" && el.imageUrl && isCrossOrigin(el.imageUrl)) {
-        crossOriginImageUrls.add(el.imageUrl)
+    props.visualClips.forEach((clip) => {
+      if (isVideoClip(clip) && clip.MediaURL && isCrossOrigin(clip.MediaURL)) {
+        crossOriginImageUrls.add(clip.MediaURL)
       }
     })
 
-    // 2. 如果没有跨域图片，直接导出
+    // 如果没有跨域图片，直接导出
     if (crossOriginImageUrls.size === 0) {
       const stage = stageRef.value.getNode()
       return stage.toDataURL({ pixelRatio: 2 })
     }
 
-    // 3. 用 CORS 模式重新加载所有跨域图片
+    // 用 CORS 模式重新加载所有跨域图片
     const corsImageMap = new Map<string, HTMLImageElement>()
 
     try {
@@ -284,7 +311,7 @@ async function exportToDataURL(): Promise<string | null> {
       return null
     }
 
-    // 4. 创建临时 Stage 用于导出
+    // 创建临时 Stage 用于导出
     const Konva = (await import("konva")).default
     const tempStage = new Konva.Stage({
       container: document.createElement("div"),
@@ -295,7 +322,7 @@ async function exportToDataURL(): Promise<string | null> {
     const tempLayer = new Konva.Layer()
     tempStage.add(tempLayer)
 
-    // 5. 添加白色背景
+    // 添加白色背景
     const background = new Konva.Rect({
       x: 0,
       y: 0,
@@ -305,48 +332,38 @@ async function exportToDataURL(): Promise<string | null> {
     })
     tempLayer.add(background)
 
-    // 6. 重新绘制所有元素（使用 CORS 加载的图片）
-    props.elements.forEach((el) => {
-      if (el.type === "text") {
+    // 重新绘制所有元素
+    props.visualClips.forEach((clip) => {
+      if (isSubtitleClip(clip)) {
         const text = new Konva.Text({
-          x: el.x,
-          y: el.y,
-          text: el.text,
-          fontSize: el.fontSize,
-          fontFamily: el.fontFamily,
-          fill: el.fill,
-          align: el.textAlign,
-          width: el.width,
-          scaleX: el.scaleX,
-          scaleY: el.scaleY,
-          rotation: el.rotation,
-          opacity: el.opacity
+          x: clip.X ?? 0,
+          y: clip.Y ?? 0,
+          text: clip.Content,
+          fontSize: clip.FontSize ?? 24,
+          fontFamily: clip.Font || "Arial",
+          fill: clip.FontColor ?? "#1f2937",
+          align: clip.Alignment ?? "left",
+          rotation: clip.Angle ?? 0,
+          opacity: clip.FontColorOpacity ?? 1
         })
         tempLayer.add(text)
-      } else if (el.type === "image" && el.imageUrl) {
-        // 使用 CORS 加载的图片（如果有），否则使用缓存的图片
-        const img = corsImageMap.get(el.imageUrl) || imageCache.value.get(el.imageUrl)
+      } else if (isVideoClip(clip) && clip.MediaURL) {
+        const img = corsImageMap.get(clip.MediaURL) || imageCache.value.get(clip.MediaURL)
         if (img) {
           const image = new Konva.Image({
-            x: el.x,
-            y: el.y,
+            x: clip.X ?? 0,
+            y: clip.Y ?? 0,
             image: img,
-            width: el.width,
-            height: el.height,
-            scaleX: el.scaleX,
-            scaleY: el.scaleY,
-            rotation: el.rotation,
-            opacity: el.opacity
+            width: clip.Width,
+            height: clip.Height,
+            opacity: clip.Opacity ?? 1
           })
           tempLayer.add(image)
         }
       }
     })
 
-    // 7. 导出临时 Stage
     const dataURL = tempStage.toDataURL({ pixelRatio: 2 })
-
-    // 8. 清理临时 Stage
     tempStage.destroy()
 
     return dataURL
@@ -384,47 +401,28 @@ defineExpose({
           }"
         />
 
-        <!-- 渲染所有元素 - 核心：必须设置 id 属性用于 Transformer 查找 -->
-        <template v-for="element in elements" :key="`el-${element.id}`">
-          <!-- 文本 -->
+        <!-- 渲染所有可视素材 -->
+        <template v-for="clip in visualClips" :key="`clip-${clip.Id}`">
+          <!-- 字幕（文本） -->
           <v-text
-            v-if="element.type === 'text'"
-            :key="`text-${element.id}-${element.fontFamily}`"
-            :config="{
-              id: element.id,
-              name: element.id,
-              x: element.x,
-              y: element.y,
-              text: element.text,
-              fontSize: element.fontSize,
-              fontFamily: element.fontFamily || 'Arial',
-              fill: element.fill,
-              stroke: element.stroke,
-              strokeWidth: element.strokeWidth,
-              width: element.width,
-              align: element.textAlign,
-              fontStyle: `${element.fontStyle || 'normal'} ${element.fontWeight || 'normal'}`,
-              textDecoration: element.textDecoration || 'none',
-              rotation: element.rotation,
-              opacity: element.opacity,
-              draggable: true,
-              visible: editingTextId !== element.id,
-            }"
-            @dragend="handleDragEnd(element.id, $event)"
-            @transformend="handleTransformEnd(element.id, $event)"
-            @dblclick="handleTextDblClick(element.id, $event)"
+            v-if="isSubtitleClip(clip)"
+            :key="`text-${clip.Id}-${clip.Font}`"
+            :config="getTextConfig(clip)"
+            @dragend="handleDragEnd(clip, $event)"
+            @transformend="handleTransformEnd(clip, $event)"
+            @dblclick="handleTextDblClick(clip, $event)"
           />
 
-          <!-- 图片 -->
+          <!-- 图片/视频 -->
           <v-image
-            v-else-if="element.type === 'image'"
-            :config="getImageConfig(element)"
-            @dragend="handleDragEnd(element.id, $event)"
-            @transformend="handleTransformEnd(element.id, $event)"
+            v-else-if="isVideoClip(clip)"
+            :config="getImageConfig(clip)"
+            @dragend="handleDragEnd(clip, $event)"
+            @transformend="handleTransformEnd(clip, $event)"
           />
         </template>
 
-        <!-- Transformer - 用于选中元素的变换控制 -->
+        <!-- Transformer -->
         <v-transformer
           ref="transformerRef"
           :config="{
@@ -442,17 +440,17 @@ defineExpose({
 
     <!-- 文本编辑器 -->
     <textarea
-      v-if="editingTextId"
+      v-if="editingTextClip"
       ref="textEditorRef"
-      :value="elements.find(el => el.id === editingTextId)?.text"
+      :value="editingTextClip.Content"
       :style="{
         position: 'absolute',
-        left: `${elements.find(el => el.id === editingTextId)?.x || 0}px`,
-        top: `${elements.find(el => el.id === editingTextId)?.y || 0}px`,
-        width: `${elements.find(el => el.id === editingTextId)?.width || 200}px`,
-        fontSize: `${elements.find(el => el.id === editingTextId)?.fontSize || 24}px`,
-        fontFamily: 'Arial',
-        color: elements.find(el => el.id === editingTextId)?.fill || '#000',
+        left: `${editingTextClip.X ?? 0}px`,
+        top: `${editingTextClip.Y ?? 0}px`,
+        width: '200px',
+        fontSize: `${editingTextClip.FontSize ?? 24}px`,
+        fontFamily: editingTextClip.Font || 'Arial',
+        color: editingTextClip.FontColor ?? '#000',
         padding: '0',
         margin: '0',
         border: '1px solid #1890ff',

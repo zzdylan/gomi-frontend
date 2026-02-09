@@ -115,3 +115,11 @@ export function moveTemplateApi(data: Template.MoveTemplateRequestData) {
     data
   })
 }
+
+/** 复制模板 */
+export function copyTemplateApi(id: number | string) {
+  return request<Template.CreateTemplateResponseData>({
+    url: `templates/${id}/copy`,
+    method: "post"
+  })
+}

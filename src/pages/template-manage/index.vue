@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import type { TemplateFolderItem, TemplateItem } from "./apis/type"
-import { ArrowLeft, Check, Close, FolderAdd } from "@element-plus/icons-vue"
+import { ArrowLeft, Check, Close, CopyDocument, FolderAdd } from "@element-plus/icons-vue"
 import { useRouter } from "vue-router"
 import {
   batchDeleteTemplateApi,
+  copyTemplateApi,
   createTemplateFolderApi,
   deleteTemplateApi,
   deleteTemplateFolderApi,
@@ -18,6 +19,20 @@ defineOptions({
 })
 
 const router = useRouter()
+
+// 从模板content中获取画布尺寸显示文本
+function getCanvasSizeText(template: TemplateItem): string {
+  try {
+    const data = JSON.parse(template.content)
+    const canvas = data.content?.FECanvas
+    if (canvas) {
+      return `${canvas.Width} × ${canvas.Height}`
+    }
+    return "-"
+  } catch {
+    return "-"
+  }
+}
 
 // ==================== 视图状态 ====================
 const viewMode = ref<"folders" | "templates">("folders") // folders=文件夹列表视图, templates=模板列表视图
@@ -115,20 +130,16 @@ function handleDeleteFolder(folder: TemplateFolderItem) {
     confirmButtonText: "确定",
     cancelButtonText: "取消"
   }).then(async () => {
-    try {
-      await deleteTemplateFolderApi(folder.id)
-      ElMessage.success("删除成功")
+    await deleteTemplateFolderApi(folder.id)
+    ElMessage.success("删除成功")
 
-      // 如果删除的是当前打开的文件夹，返回文件夹列表
-      if (currentFolderId.value === folder.id) {
-        backToFolders()
-      }
-
-      loadFolders()
-    } catch (error: any) {
-      ElMessage.error(error.message || "删除失败")
+    // 如果删除的是当前打开的文件夹，返回文件夹列表
+    if (currentFolderId.value === folder.id) {
+      backToFolders()
     }
-  })
+
+    loadFolders()
+  }).catch(() => {})
 }
 
 // ==================== 模板管理 ====================
@@ -220,14 +231,17 @@ function handleDeleteTemplate(template: TemplateItem) {
     confirmButtonText: "确定",
     cancelButtonText: "取消"
   }).then(async () => {
-    try {
-      await deleteTemplateApi(template.id)
-      ElMessage.success("删除成功")
-      loadTemplates()
-    } catch (error: any) {
-      ElMessage.error(error.message || "删除失败")
-    }
-  })
+    await deleteTemplateApi(template.id)
+    ElMessage.success("删除成功")
+    loadTemplates()
+  }).catch(() => {})
+}
+
+// 复制模板
+async function handleCopyTemplate(template: TemplateItem) {
+  await copyTemplateApi(template.id)
+  ElMessage.success("复制成功")
+  loadTemplates()
 }
 
 // 批量删除模板
@@ -242,17 +256,13 @@ function handleBatchDelete() {
     confirmButtonText: "确定",
     cancelButtonText: "取消"
   }).then(async () => {
-    try {
-      await batchDeleteTemplateApi({
-        ids: selectedTemplates.value.map(t => t.id)
-      })
-      ElMessage.success("批量删除成功")
-      selectedTemplates.value = []
-      loadTemplates()
-    } catch (error: any) {
-      ElMessage.error(error.message || "批量删除失败")
-    }
-  })
+    await batchDeleteTemplateApi({
+      ids: selectedTemplates.value.map(t => t.id)
+    })
+    ElMessage.success("批量删除成功")
+    selectedTemplates.value = []
+    loadTemplates()
+  }).catch(() => {})
 }
 
 // 移动模板
@@ -296,18 +306,14 @@ async function handleMoveConfirm() {
     return
   }
 
-  try {
-    await moveTemplateApi({
-      ids: selectedTemplates.value.map(t => t.id),
-      folder_id: targetFolderId.value
-    })
-    ElMessage.success("移动成功")
-    moveDialogVisible.value = false
-    selectedTemplates.value = []
-    loadTemplates()
-  } catch (error: any) {
-    ElMessage.error(error.message || "移动失败")
-  }
+  await moveTemplateApi({
+    ids: selectedTemplates.value.map(t => t.id),
+    folder_id: targetFolderId.value
+  })
+  ElMessage.success("移动成功")
+  moveDialogVisible.value = false
+  selectedTemplates.value = []
+  loadTemplates()
 }
 
 // 显示移动对话框中的内联创建文件夹输入框
@@ -329,25 +335,21 @@ async function confirmInlineFolderCreationInMove() {
     return
   }
 
-  try {
-    const { data } = await createTemplateFolderApi({
-      name: newFolderNameInMove.value,
-      parent_id: 0
-    })
-    ElMessage.success("文件夹创建成功")
+  const { data } = await createTemplateFolderApi({
+    name: newFolderNameInMove.value,
+    parent_id: 0
+  })
+  ElMessage.success("文件夹创建成功")
 
-    // 重新加载文件夹列表
-    await loadAllFolders()
+  // 重新加载文件夹列表
+  await loadAllFolders()
 
-    // 自动选择新创建的文件夹
-    targetFolderId.value = data.id
+  // 自动选择新创建的文件夹
+  targetFolderId.value = data.id
 
-    // 重置状态
-    isCreatingFolderInMove.value = false
-    newFolderNameInMove.value = ""
-  } catch (error: any) {
-    ElMessage.error(error.message || "创建文件夹失败")
-  }
+  // 重置状态
+  isCreatingFolderInMove.value = false
+  newFolderNameInMove.value = ""
 }
 
 // ==================== 生命周期 ====================
@@ -466,7 +468,7 @@ onMounted(() => {
             class="template-card"
             :class="{ selected: selectedTemplates.some((t) => t.id === template.id) }"
           >
-            <!-- 缩略图区域 -->
+            <!-- 缩略图区域 - 点击打开编辑器 -->
             <div class="template-preview" @click="openTemplateEditor(template)">
               <img v-if="template.thumbnail" :src="template.thumbnail" :alt="template.name">
               <div v-else class="no-thumbnail">
@@ -475,22 +477,31 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- 信息区域 -->
-            <div class="template-info" @click="toggleSelection(template)">
-              <div class="template-name" :title="template.name">
-                {{ template.name }}
+            <!-- 信息区域 - 点击选中 -->
+            <div class="template-bottom" @click="toggleSelection(template)">
+              <div class="template-info">
+                <div class="template-name" :title="template.name">
+                  {{ template.name }}
+                </div>
+                <div class="template-meta">
+                  <span>{{ getCanvasSizeText(template) }}</span>
+                  <span>{{ new Date(template.created_at).toLocaleDateString() }}</span>
+                </div>
               </div>
-              <div class="template-meta">
-                <span>{{ template.canvas_width }} × {{ template.canvas_height }}</span>
-                <span>{{ new Date(template.created_at).toLocaleDateString() }}</span>
-              </div>
-            </div>
 
-            <!-- 操作按钮 -->
-            <div class="template-actions">
-              <el-button text type="danger" @click.stop="handleDeleteTemplate(template)">
-                <el-icon><Delete /></el-icon>
-              </el-button>
+              <!-- 操作按钮 -->
+              <div class="template-actions">
+                <el-tooltip content="复制" placement="top">
+                  <el-button text @click.stop="handleCopyTemplate(template)">
+                    <el-icon><CopyDocument /></el-icon>
+                  </el-button>
+                </el-tooltip>
+                <el-tooltip content="删除" placement="top">
+                  <el-button text type="danger" @click.stop="handleDeleteTemplate(template)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-tooltip>
+              </div>
             </div>
           </div>
         </div>
@@ -699,7 +710,6 @@ onMounted(() => {
     border: 2px solid #e4e7ed;
     border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
     transition: all 0.3s;
     height: fit-content;
 
@@ -709,7 +719,10 @@ onMounted(() => {
 
     &.selected {
       border-color: #409eff;
-      background: #ecf5ff;
+
+      .template-bottom {
+        background: #ecf5ff;
+      }
     }
 
     .template-preview {
@@ -720,11 +733,12 @@ onMounted(() => {
       justify-content: center;
       background: #f5f7fa;
       overflow: hidden;
+      cursor: pointer;
 
       img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
       }
 
       .no-thumbnail {
@@ -740,8 +754,23 @@ onMounted(() => {
       }
     }
 
-    .template-info {
+    .template-bottom {
+      cursor: pointer;
       padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      transition: background 0.2s;
+
+      &:hover {
+        background: #f5f7fa;
+      }
+    }
+
+    .template-info {
+      flex: 1;
+      min-width: 0;
 
       .template-name {
         font-size: 14px;
@@ -762,9 +791,7 @@ onMounted(() => {
     }
 
     .template-actions {
-      padding: 0 12px 12px;
-      display: flex;
-      justify-content: flex-end;
+      flex-shrink: 0;
     }
   }
 
