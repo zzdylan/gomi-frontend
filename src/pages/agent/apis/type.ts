@@ -43,8 +43,8 @@ export interface CreateAgentRequestData {
   // 账号信息
   username: string
   password: string
-  // 代理商信息
-  type: number
+  // 代理商信息（type 由后端根据当前用户角色自动判断）
+  type?: number
   parent_id?: number
   company_name: string
   contact_name: string

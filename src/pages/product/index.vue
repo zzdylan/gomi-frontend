@@ -427,10 +427,6 @@ function handleBatchDelete() {
     })
 }
 // #endregion
-
-onMounted(() => {
-  xGridDom.value?.commitProxy("query")
-})
 </script>
 
 <template>

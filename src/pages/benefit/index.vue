@@ -482,7 +482,6 @@ onMounted(async () => {
       productItem.itemRender.options = productOptions.value
     }
   }
-  xGridDom.value?.commitProxy("query")
 })
 </script>
 

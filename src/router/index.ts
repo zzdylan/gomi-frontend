@@ -64,114 +64,6 @@ export const constantRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/demo",
-    component: Layouts,
-    redirect: "/demo/demo-list",
-    name: "Demo",
-    meta: {
-      title: "Demo管理",
-      elIcon: "DataBoard"
-    },
-    children: [
-      {
-        path: "demo-list",
-        component: () => import("@/pages/demo/demo-list/index.vue"),
-        name: "DemoList",
-        meta: {
-          title: "Demo列表",
-          keepAlive: true
-        }
-      },
-      {
-        path: "demo-drawer",
-        component: () => import("@/pages/demo/demo-drawer/index.vue"),
-        name: "DemoDrawer",
-        meta: {
-          title: "Demo抽屉",
-          keepAlive: true
-        }
-      }
-    ]
-  },
-  {
-    path: "/creative",
-    component: Layouts,
-    name: "Creative",
-    meta: {
-      title: "创作空间",
-      elIcon: "Picture",
-      alwaysShow: true
-    },
-    children: [
-      {
-        path: "template",
-        component: () => import("@/pages/template-manage/index.vue"),
-        name: "TemplateManage",
-        meta: {
-          title: "模板库",
-          keepAlive: true
-        }
-      },
-      {
-        path: "template/editor",
-        component: () => import("@/pages/template-editor/index-konva.vue"),
-        name: "TemplateEditorKonva",
-        meta: {
-          title: "模板编辑器",
-          keepAlive: true,
-          hidden: true
-        }
-      },
-      {
-        path: "material",
-        component: () => import("@/pages/material/index.vue"),
-        name: "MaterialLibrary",
-        meta: {
-          title: "素材库",
-          keepAlive: true
-        }
-      },
-      {
-        path: "copy-library",
-        component: () => import("@/pages/copy-library/index.vue"),
-        name: "CopyLibraryList",
-        meta: {
-          title: "文案库",
-          keepAlive: true
-        }
-      },
-      {
-        path: "copy-library/combine",
-        component: () => import("@/pages/copy-library/combine.vue"),
-        name: "CopyLibraryCombine",
-        meta: {
-          title: "组合文案",
-          keepAlive: true,
-          hidden: true
-        }
-      },
-      {
-        path: "copy-library/smart",
-        component: () => import("@/pages/copy-library/smart.vue"),
-        name: "CopyLibrarySmart",
-        meta: {
-          title: "智能文案",
-          keepAlive: true,
-          hidden: true
-        }
-      }
-    ]
-  },
-  {
-    path: "/template-editor",
-    component: () => import("@/pages/template-editor/index-konva.vue"),
-    name: "TemplateEditor",
-    meta: {
-      title: "模板编辑器",
-      hidden: true
-    }
-  },
-  {
     path: "/profile",
     component: Layouts,
     meta: {
@@ -213,7 +105,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   //       name: "ElementPlus",
   //       meta: {
   //         title: "Element Plus",
-  //         keepAlive: true
+  //         keepAlive: false
   //       }
   //     },
   //     {
@@ -222,7 +114,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   //       name: "VxeTable",
   //       meta: {
   //         title: "Vxe Table",
-  //         keepAlive: true
+  //         keepAlive: false
   //       }
   //     },
   //     {
@@ -241,7 +133,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   //           name: "Level3",
   //           meta: {
   //             title: "三级路由",
-  //             keepAlive: true
+  //             keepAlive: false
   //           }
   //         }
   //       ]
@@ -315,6 +207,128 @@ export const constantRoutes: RouteRecordRaw[] = [
  * @description 必须带有唯一的 Name 属性
  */
 export const dynamicRoutes: RouteRecordRaw[] = [
+  // Demo管理 - 超级管理员和普通用户可见（代理商不可见）
+  {
+    path: "/demo",
+    component: Layouts,
+    redirect: "/demo/demo-list",
+    name: "Demo",
+    meta: {
+      title: "Demo管理",
+      elIcon: "DataBoard",
+      roles: ["super_admin", "normal_user"]
+    },
+    children: [
+      {
+        path: "demo-list",
+        component: () => import("@/pages/demo/demo-list/index.vue"),
+        name: "DemoList",
+        meta: {
+          title: "Demo列表",
+          keepAlive: false,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "demo-drawer",
+        component: () => import("@/pages/demo/demo-drawer/index.vue"),
+        name: "DemoDrawer",
+        meta: {
+          title: "Demo抽屉",
+          keepAlive: false,
+          roles: ["super_admin", "normal_user"]
+        }
+      }
+    ]
+  },
+  // 创作空间 - 超级管理员和普通用户可见（代理商不可见）
+  {
+    path: "/creative",
+    component: Layouts,
+    name: "Creative",
+    meta: {
+      title: "创作空间",
+      elIcon: "Picture",
+      alwaysShow: true,
+      roles: ["super_admin", "normal_user"]
+    },
+    children: [
+      {
+        path: "template",
+        component: () => import("@/pages/template-manage/index.vue"),
+        name: "TemplateManage",
+        meta: {
+          title: "模板库",
+          keepAlive: false,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "template/editor",
+        component: () => import("@/pages/template-editor/index-konva.vue"),
+        name: "TemplateEditorKonva",
+        meta: {
+          title: "模板编辑器",
+          keepAlive: false,
+          hidden: true,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "material",
+        component: () => import("@/pages/material/index.vue"),
+        name: "MaterialLibrary",
+        meta: {
+          title: "素材库",
+          keepAlive: false,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "copy-library",
+        component: () => import("@/pages/copy-library/index.vue"),
+        name: "CopyLibraryList",
+        meta: {
+          title: "文案库",
+          keepAlive: false,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "copy-library/combine",
+        component: () => import("@/pages/copy-library/combine.vue"),
+        name: "CopyLibraryCombine",
+        meta: {
+          title: "组合文案",
+          keepAlive: false,
+          hidden: true,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "copy-library/smart",
+        component: () => import("@/pages/copy-library/smart.vue"),
+        name: "CopyLibrarySmart",
+        meta: {
+          title: "智能文案",
+          keepAlive: false,
+          hidden: true,
+          roles: ["super_admin", "normal_user"]
+        }
+      }
+    ]
+  },
+  // 模板编辑器独立页面 - 超级管理员和普通用户可见
+  {
+    path: "/template-editor",
+    component: () => import("@/pages/template-editor/index-konva.vue"),
+    name: "TemplateEditor",
+    meta: {
+      title: "模板编辑器",
+      hidden: true,
+      roles: ["super_admin", "normal_user"]
+    }
+  },
   {
     path: "/admin",
     component: Layouts,
@@ -333,7 +347,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "UserManagement",
         meta: {
           title: "用户管理",
-          keepAlive: true,
+          keepAlive: false,
           // 所有代理商都能看用户管理（后端会过滤只显示自己的用户）
           roles: ["super_admin", "level1_agent", "level2_agent", "level3_agent"]
         }
@@ -344,7 +358,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "RoleManagement",
         meta: {
           title: "角色管理",
-          keepAlive: true,
+          keepAlive: false,
           // 角色管理仅超级管理员可见
           roles: ["super_admin"]
         }
@@ -370,7 +384,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         meta: {
           title: "代理商管理",
           elIcon: "UserFilled",
-          keepAlive: true,
+          keepAlive: false,
           roles: ["super_admin", "level1_agent", "level2_agent"]
         }
       }
@@ -394,7 +408,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "ProductManagement",
         meta: {
           title: "产品管理",
-          keepAlive: true,
+          keepAlive: false,
           roles: ["super_admin"]
         }
       },
@@ -404,7 +418,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "BenefitManagement",
         meta: {
           title: "权益管理",
-          keepAlive: true,
+          keepAlive: false,
           roles: ["super_admin"]
         }
       },
@@ -414,7 +428,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "PackageManagement",
         meta: {
           title: "套餐管理",
-          keepAlive: true,
+          keepAlive: false,
           roles: ["super_admin"]
         }
       }
@@ -438,7 +452,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "AiProviderManagement",
         meta: {
           title: "AI厂商",
-          keepAlive: true,
+          keepAlive: false,
           roles: ["super_admin"]
         }
       },
@@ -448,7 +462,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "AiSceneConfigManagement",
         meta: {
           title: "场景配置",
-          keepAlive: true,
+          keepAlive: false,
           roles: ["super_admin"]
         }
       }

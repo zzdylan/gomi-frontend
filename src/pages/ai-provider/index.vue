@@ -381,10 +381,6 @@ function handleDelete(row: RowMeta) {
     })
 }
 // #endregion
-
-onMounted(() => {
-  xGridDom.value?.commitProxy("query")
-})
 </script>
 
 <template>

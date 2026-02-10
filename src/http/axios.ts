@@ -53,6 +53,7 @@ function createInstance() {
       // status 是 HTTP 状态码
       const status = get(error, "response.status")
       const message = get(error, "response.data.message")
+      const errors = get(error, "response.data.errors")
       switch (status) {
         case 400:
           error.message = "请求错误"
@@ -70,6 +71,16 @@ function createInstance() {
           break
         case 408:
           error.message = "请求超时"
+          break
+        case 422:
+          // 验证错误，提取第一个错误信息
+          if (errors && typeof errors === "object") {
+            const firstField = Object.keys(errors)[0]
+            const firstError = errors[firstField]
+            error.message = Array.isArray(firstError) ? firstError[0] : firstError
+          } else {
+            error.message = message || "请求参数验证失败"
+          }
           break
         case 500:
           error.message = "服务器内部错误"

@@ -433,7 +433,6 @@ function handleDelete(row: RowMeta) {
 
 onMounted(() => {
   loadProviders()
-  xGridDom.value?.commitProxy("query")
 })
 </script>
 

@@ -340,7 +340,7 @@ const xFormOpt = reactive<VxeFormProps>({
       },
       visibleMethod: () => currentFormType.value === "create"
     },
-    // 代理商信息
+    // 代理商信息（代理类型由后端根据当前用户身份自动决定，编辑时只读展示）
     {
       field: "type",
       title: "代理类型",
@@ -349,9 +349,10 @@ const xFormOpt = reactive<VxeFormProps>({
         name: "VxeSelect",
         options: AGENT_TYPE_OPTIONS,
         props: {
-          placeholder: "请选择代理类型"
+          disabled: true
         }
-      }
+      },
+      visibleMethod: () => currentFormType.value === "update"
     },
     {
       field: "company_name",
@@ -455,7 +456,6 @@ const xFormOpt = reactive<VxeFormProps>({
       { required: true, message: "请输入密码" },
       { min: 6, max: 50, message: "密码长度需在 6~50 之间" }
     ],
-    type: [{ required: true, message: "请选择代理类型" }],
     company_name: [{ required: true, message: "请输入公司名称" }],
     contact_name: [{ required: true, message: "请输入联系人姓名" }],
     contact_phone: [
@@ -526,12 +526,10 @@ async function submitForm() {
 
   try {
     if (currentFormType.value === "create") {
-      // 新增时提交账号信息
+      // 新增时提交账号信息（type 由后端根据当前用户身份自动决定）
       const submitData = {
         username: formData.username || "",
         password: formData.password || "",
-        type: formData.type,
-        parent_id: formData.parent_id ? Number(formData.parent_id) : undefined,
         company_name: formData.company_name,
         contact_name: formData.contact_name,
         contact_phone: formData.contact_phone,
@@ -544,10 +542,8 @@ async function submitForm() {
       await createAgentApi(submitData)
       ElMessage.success("创建成功")
     } else {
-      // 更新时不提交账号信息
+      // 更新时不提交账号信息和代理类型（type 不允许修改）
       const submitData = {
-        type: formData.type,
-        parent_id: formData.parent_id ? String(formData.parent_id) : undefined,
         company_name: formData.company_name,
         contact_name: formData.contact_name,
         contact_phone: formData.contact_phone,
@@ -633,10 +629,6 @@ function handleBatchDelete() {
     })
 }
 // #endregion
-
-onMounted(() => {
-  xGridDom.value?.commitProxy("query")
-})
 </script>
 
 <template>

@@ -274,11 +274,7 @@ const xFormOpt: VxeFormProps = reactive({
         props: {
           placeholder: "请选择角色",
           multiple: true,
-          options: [
-            { label: "超级管理员", value: "super_admin" },
-            { label: "代理商", value: "agent" },
-            { label: "普通用户", value: "normal_user" }
-          ]
+          options: []
         }
       }
     }
@@ -289,24 +285,29 @@ const xFormOpt: VxeFormProps = reactive({
       {
         required: true,
         validator: ({ itemValue }) => {
-          switch (true) {
-            case !itemValue:
-              return new Error("请输入用户名")
-            case !itemValue.trim():
-              return new Error("用户名不能为空格")
-            case itemValue.trim().length < 3:
-              return new Error("用户名长度不能少于3个字符")
-            case itemValue.trim().length > 50:
-              return new Error("用户名长度不能超过50个字符")
+          if (!itemValue || !itemValue.trim()) {
+            return new Error("用户名为必填项")
+          }
+          const value = itemValue.trim()
+          if (!/^[a-z0-9]+$/i.test(value)) {
+            return new Error("用户名格式错误，只允许数字和英文")
+          }
+          if (value.length < 3 || value.length > 20) {
+            return new Error("用户名长度需在 3~20 之间")
           }
         }
       }
     ],
     name: [
       {
+        required: true,
         validator: ({ itemValue }) => {
-          if (itemValue && itemValue.trim() && itemValue.trim().length > 100) {
-            return new Error("姓名长度不能超过100个字符")
+          if (!itemValue || !itemValue.trim()) {
+            return new Error("用户姓名为必填项")
+          }
+          const value = itemValue.trim()
+          if (value.length < 3 || value.length > 20) {
+            return new Error("用户姓名长度需在 3~20 之间")
           }
         }
       }
@@ -317,7 +318,7 @@ const xFormOpt: VxeFormProps = reactive({
           if (itemValue && itemValue.trim()) {
             const emailRegex = /^[\w.%+-]+@[\w.-]+\.[a-z]{2,}$/i
             if (!emailRegex.test(itemValue.trim())) {
-              return new Error("请输入有效的邮箱地址")
+              return new Error("Email 格式不正确")
             }
           }
         }
@@ -329,7 +330,7 @@ const xFormOpt: VxeFormProps = reactive({
           if (itemValue && itemValue.trim()) {
             const phoneRegex = /^1[3-9]\d{9}$/
             if (!phoneRegex.test(itemValue.trim())) {
-              return new Error("请输入有效的手机号")
+              return new Error("手机号格式不正确")
             }
           }
         }
@@ -339,14 +340,24 @@ const xFormOpt: VxeFormProps = reactive({
       {
         validator: ({ itemValue }) => {
           if (!crudStore.isUpdate) {
-            switch (true) {
-              case !itemValue:
-                return new Error("请输入密码")
-              case !itemValue.trim():
-                return new Error("密码不能为空格")
-              case itemValue.trim().length < 6:
-                return new Error("密码长度不能少于6个字符")
+            if (!itemValue || !itemValue.trim()) {
+              return new Error("密码为必填项")
             }
+            if (itemValue.trim().length < 6) {
+              return new Error("密码长度需大于 6")
+            }
+          } else if (itemValue && itemValue.trim() && itemValue.trim().length < 6) {
+            return new Error("密码长度需大于 6")
+          }
+        }
+      }
+    ],
+    roles: [
+      {
+        required: true,
+        validator: ({ itemValue }) => {
+          if (!itemValue || !Array.isArray(itemValue) || itemValue.length === 0) {
+            return new Error("请选择角色")
           }
         }
       }
@@ -512,17 +523,62 @@ const crudStore = reactive({
 // 角色映射
 const roleMap: Record<string, string> = {
   super_admin: "超级管理员",
-  agent: "代理商",
+  level1_agent: "总代理",
+  level2_agent: "普通代理",
+  level3_agent: "下级代理",
   normal_user: "普通用户"
 }
+
+// 根据当前用户角色计算可选的角色列表
+const userStore = useUserStore()
+const currentUserRoles = computed(() => userStore.roles)
+
+// 判断当前用户是否是超级管理员
+const isSuperAdmin = computed(() => currentUserRoles.value.includes("super_admin"))
+
+// 判断当前用户是否是代理商
+const isAgent = computed(() =>
+  currentUserRoles.value.some(role =>
+    ["level1_agent", "level2_agent", "level3_agent"].includes(role)
+  )
+)
+
+// 可选角色列表（根据当前用户权限）
+const availableRoleOptions = computed(() => {
+  if (isSuperAdmin.value) {
+    // 超级管理员可以创建超级管理员和普通用户
+    return [
+      { label: "超级管理员", value: "super_admin" },
+      { label: "普通用户", value: "normal_user" }
+    ]
+  } else if (isAgent.value) {
+    // 代理商只能创建普通用户
+    return [
+      { label: "普通用户", value: "normal_user" }
+    ]
+  }
+  // 默认只显示普通用户
+  return [
+    { label: "普通用户", value: "normal_user" }
+  ]
+})
 
 function getRoleLabel(role: string) {
   return roleMap[role as keyof typeof roleMap] || role
 }
 
-// 一键登录
-const userStore = useUserStore()
+// 更新表单中的角色选项
+function updateRoleOptions() {
+  const rolesItem = xFormOpt.items?.find(item => item.field === "roles")
+  if (rolesItem?.itemRender?.props) {
+    rolesItem.itemRender.props.options = availableRoleOptions.value
+  }
+}
 
+// 监听角色选项变化
+watch(availableRoleOptions, updateRoleOptions, { immediate: true })
+
+// 一键登录
 async function handleImpersonate(row: RowMeta) {
   try {
     await ElMessageBox.confirm(
