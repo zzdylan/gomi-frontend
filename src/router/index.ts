@@ -323,7 +323,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
     meta: {
       title: "后台管理",
       elIcon: "Setting",
-      roles: ["super_admin"],
+      roles: ["super_admin", "level1_agent", "level2_agent", "level3_agent"],
       alwaysShow: true
     },
     children: [
@@ -334,7 +334,8 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         meta: {
           title: "用户管理",
           keepAlive: true,
-          roles: ["super_admin"]
+          // 所有代理商都能看用户管理（后端会过滤只显示自己的用户）
+          roles: ["super_admin", "level1_agent", "level2_agent", "level3_agent"]
         }
       },
       {
@@ -344,6 +345,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         meta: {
           title: "角色管理",
           keepAlive: true,
+          // 角色管理仅超级管理员可见
           roles: ["super_admin"]
         }
       }
@@ -357,7 +359,8 @@ export const dynamicRoutes: RouteRecordRaw[] = [
     meta: {
       title: "代理商管理",
       elIcon: "UserFilled",
-      roles: ["super_admin"]
+      // level1和level2代理可以管理下级代理，level3没有下级代理所以不显示
+      roles: ["super_admin", "level1_agent", "level2_agent"]
     },
     children: [
       {
@@ -368,7 +371,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
           title: "代理商管理",
           elIcon: "UserFilled",
           keepAlive: true,
-          roles: ["super_admin"]
+          roles: ["super_admin", "level1_agent", "level2_agent"]
         }
       }
     ]
@@ -411,6 +414,40 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         name: "PackageManagement",
         meta: {
           title: "套餐管理",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      }
+    ]
+  },
+  {
+    path: "/ai-config",
+    component: Layouts,
+    redirect: "/ai-config/provider",
+    name: "AiConfig",
+    meta: {
+      title: "AI配置",
+      elIcon: "Cpu",
+      roles: ["super_admin"],
+      alwaysShow: true
+    },
+    children: [
+      {
+        path: "provider",
+        component: () => import("@/pages/ai-provider/index.vue"),
+        name: "AiProviderManagement",
+        meta: {
+          title: "AI厂商",
+          keepAlive: true,
+          roles: ["super_admin"]
+        }
+      },
+      {
+        path: "scene",
+        component: () => import("@/pages/ai-scene-config/index.vue"),
+        name: "AiSceneConfigManagement",
+        meta: {
+          title: "场景配置",
           keepAlive: true,
           roles: ["super_admin"]
         }

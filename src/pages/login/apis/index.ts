@@ -14,6 +14,9 @@ export function loginApi(data: Auth.LoginRequestData) {
   return request<Auth.LoginResponseData>({
     url: "auth/login",
     method: "post",
-    data
+    data,
+    headers: {
+      "X-Tenant-ID": import.meta.env.VITE_TENANT_ID
+    }
   })
 }

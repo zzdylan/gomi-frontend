@@ -42,10 +42,10 @@ export function registerNavigationGuard(router: Router) {
       permissionStore.addRoutes.forEach(route => router.addRoute(route))
       // 设置 replace: true, 因此导航将不会留下历史记录
       return { ...to, replace: true }
-    } catch (error) {
+    } catch {
       // 过程中发生任何错误，都直接重置 Token，并重定向到登录页面
+      // 错误消息已在 axios 拦截器中显示，这里不再重复提示
       userStore.resetToken()
-      ElMessage.error((error as Error).message || "路由守卫发生错误")
       return LOGIN_PATH
     }
   })
