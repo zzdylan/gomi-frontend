@@ -16,6 +16,7 @@ export interface TemplateItem {
   name: string
   thumbnail: string
   content: string // 画布尺寸在 content.FECanvas 中
+  custom_data?: string // 自定义数据（动态元素配置）
   created_at: string
   updated_at: string
 }
@@ -43,6 +44,7 @@ export interface CreateTemplateRequestData {
   name: string
   thumbnail?: string
   content: string // 画布尺寸在 content.FECanvas 中
+  custom_data?: string // 自定义数据（动态元素配置）
 }
 
 /** 更新模板请求数据 */
@@ -50,6 +52,7 @@ export interface UpdateTemplateRequestData {
   name: string
   thumbnail?: string
   content?: string // 画布尺寸在 content.FECanvas 中
+  custom_data?: string // 自定义数据（动态元素配置）
 }
 
 /** 批量删除模板请求数据 */

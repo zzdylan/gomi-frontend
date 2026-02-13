@@ -435,19 +435,29 @@ export const dynamicRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/ai-config",
+    path: "/system-config",
     component: Layouts,
-    redirect: "/ai-config/provider",
-    name: "AiConfig",
+    redirect: "/system-config/service",
+    name: "SystemConfig",
     meta: {
-      title: "AI配置",
-      elIcon: "Cpu",
+      title: "系统配置",
+      elIcon: "Tools",
       roles: ["super_admin"],
       alwaysShow: true
     },
     children: [
       {
-        path: "provider",
+        path: "service",
+        component: () => import("@/pages/service-config/index.vue"),
+        name: "ServiceConfigManagement",
+        meta: {
+          title: "服务配置",
+          keepAlive: false,
+          roles: ["super_admin"]
+        }
+      },
+      {
+        path: "ai-provider",
         component: () => import("@/pages/ai-provider/index.vue"),
         name: "AiProviderManagement",
         meta: {
@@ -457,11 +467,11 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "scene",
+        path: "ai-scene",
         component: () => import("@/pages/ai-scene-config/index.vue"),
         name: "AiSceneConfigManagement",
         meta: {
-          title: "场景配置",
+          title: "AI场景配置",
           keepAlive: false,
           roles: ["super_admin"]
         }

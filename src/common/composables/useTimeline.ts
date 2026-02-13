@@ -1,8 +1,11 @@
 import type {
   AnyClip,
   AudioTrackClip,
+  DynamicText,
+  DynamicTextTypeValue,
   SubtitleTrackClip,
   TemplateContent,
+  TemplateCustomData,
   VideoTrackClip,
   VisualClip
 } from "@/types/timeline"
@@ -34,6 +37,11 @@ export function useTimeline() {
     VideoTracks: [{ VideoTrackClips: [] }],
     SubtitleTracks: [{ SubtitleTrackClips: [] }],
     AudioTracks: [{ AudioTrackClips: [] }]
+  })
+
+  // 模板自定义数据（动态元素配置）
+  const customData = ref<TemplateCustomData>({
+    dynamic_texts: []
   })
 
   // 当前选中的素材ID
@@ -323,7 +331,52 @@ export function useTimeline() {
       SubtitleTracks: [{ SubtitleTrackClips: [] }],
       AudioTracks: [{ AudioTrackClips: [] }]
     }
+    customData.value = { dynamic_texts: [] }
     selectedId.value = null
+  }
+
+  // ========================================
+  // 动态文案管理
+  // ========================================
+
+  // 获取指定 clip 的动态文案配置
+  const getDynamicText = (clipId: string): DynamicText | undefined => {
+    return customData.value.dynamic_texts?.find(dt => dt.clip_id === clipId)
+  }
+
+  // 设置动态文案配置
+  const setDynamicText = (clipId: string, type: DynamicTextTypeValue | null, customTexts?: string[]) => {
+    if (!customData.value.dynamic_texts) {
+      customData.value.dynamic_texts = []
+    }
+
+    // 移除现有配置
+    const index = customData.value.dynamic_texts.findIndex(dt => dt.clip_id === clipId)
+    if (index > -1) {
+      customData.value.dynamic_texts.splice(index, 1)
+    }
+
+    // 如果 type 不为空，添加新配置
+    if (type) {
+      const newDynamicText: DynamicText = {
+        clip_id: clipId,
+        type
+      }
+      if (type === "custom" && customTexts && customTexts.length > 0) {
+        newDynamicText.custom_texts = customTexts
+      }
+      customData.value.dynamic_texts.push(newDynamicText)
+    }
+  }
+
+  // 导出 customData JSON
+  const exportCustomData = (): TemplateCustomData => {
+    return customData.value
+  }
+
+  // 加载 customData
+  const loadCustomData = (data: TemplateCustomData) => {
+    customData.value = data || { dynamic_texts: [] }
   }
 
   // ========================================
@@ -351,6 +404,7 @@ export function useTimeline() {
   return {
     // 状态
     content,
+    customData,
     selectedId,
     stageSize,
 
@@ -381,6 +435,12 @@ export function useTimeline() {
     updateSubtitleClip,
     updateAudioClip,
     updateClip,
+
+    // 动态文案
+    getDynamicText,
+    setDynamicText,
+    exportCustomData,
+    loadCustomData,
 
     // 导入/导出
     exportForAliyun,

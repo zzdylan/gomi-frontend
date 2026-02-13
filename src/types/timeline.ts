@@ -160,6 +160,32 @@ export interface Effect {
 }
 
 // ========================================
+// 模板自定义数据（动态元素配置）
+// ========================================
+
+// 动态文字类型
+export const DynamicTextType = {
+  SUBTITLE: "subtitle", // 字幕，内容来自 TTS 返回的字幕
+  TITLE: "title", // 标题，内容来自文案库的 title 字段
+  TOPIC: "topic", // 话题，内容来自文案库的 topic 字段
+  CUSTOM: "custom" // 自定义，内容来自 CustomText 字段
+} as const
+
+export type DynamicTextTypeValue = (typeof DynamicTextType)[keyof typeof DynamicTextType]
+
+// 动态文字配置
+export interface DynamicText {
+  clip_id: string // 对应的 clip ID
+  type: DynamicTextTypeValue // 类型: subtitle/title/topic/custom
+  custom_texts?: string[] // 自定义文字列表（type=custom 时使用，随机选择）
+}
+
+// 模板自定义数据
+export interface TemplateCustomData {
+  dynamic_texts?: DynamicText[] // 动态文字列表
+}
+
+// ========================================
 // 工具类型
 // ========================================
 
@@ -243,28 +269,24 @@ export function removeInternalIds(content: TemplateContent): TemplateContent {
   return cleanContent
 }
 
-// 创建默认的视频/图片素材
+// 创建默认的视频/图片素材（不设置 TimelineIn/TimelineOut，默认一直显示）
 export function createVideoClip(type: "Video" | "Image", mediaURL: string): VideoTrackClip {
   return {
     Id: generateClipId(type === "Video" ? "video" : "image"),
     Type: type,
     MediaURL: mediaURL,
-    TimelineIn: 0,
-    TimelineOut: 3,
     X: 0,
     Y: 0,
     Opacity: 1
   }
 }
 
-// 创建默认的字幕素材
+// 创建默认的字幕素材（不设置 TimelineIn/TimelineOut，默认一直显示）
 export function createSubtitleClip(content: string = "双击编辑文本"): SubtitleTrackClip {
   return {
     Id: generateClipId("text"),
     Type: "Text",
     Content: content,
-    TimelineIn: 0,
-    TimelineOut: 3,
     X: 150,
     Y: 150,
     Font: "Arial",

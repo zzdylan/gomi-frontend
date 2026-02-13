@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TemplateFolderItem } from "@/pages/template-manage/apis/type"
-import type { SubtitleTrackClip, VideoTrackClip } from "@/types/timeline"
+import type { DynamicTextTypeValue, SubtitleTrackClip, VideoTrackClip } from "@/types/timeline"
 import { useTimeline } from "@@/composables/useTimeline"
 import { ArrowLeft, Check, Close, FolderAdd, FolderOpened } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
@@ -49,7 +49,11 @@ const {
   exportForAliyun: _exportForAliyun,
   loadFromJSON,
   reorderVideoClips,
-  reorderSubtitleClips
+  reorderSubtitleClips,
+  getDynamicText,
+  setDynamicText,
+  exportCustomData,
+  loadCustomData
 } = useTimeline()
 
 // 处理属性面板更新 - 视频/图片
@@ -63,6 +67,19 @@ function handleVideoPropertyUpdate(updates: Partial<VideoTrackClip>) {
 function handleSubtitlePropertyUpdate(updates: Partial<SubtitleTrackClip>) {
   if (selectedId.value) {
     updateSubtitleClip(selectedId.value, updates)
+  }
+}
+
+// 获取当前选中 clip 的动态文案配置
+const activeDynamicText = computed(() => {
+  if (!selectedId.value) return undefined
+  return getDynamicText(selectedId.value)
+})
+
+// 处理动态文案更新
+function handleDynamicTextUpdate(type: DynamicTextTypeValue | null, customTexts?: string[]) {
+  if (selectedId.value) {
+    setDynamicText(selectedId.value, type, customTexts)
   }
 }
 
@@ -220,10 +237,12 @@ async function handleSaveConfirm() {
     }
 
     // 2. 保存模板数据（画布尺寸已包含在 content.FECanvas 中）
+    const customDataJson = exportCustomData()
     const templateData = {
       name: saveForm.name,
       folder_id: saveForm.folder_id,
       content: JSON.stringify(json),
+      custom_data: JSON.stringify(customDataJson),
       thumbnail: thumbnailUrl
     }
 
@@ -314,6 +333,12 @@ async function loadTemplateFromRoute() {
       // 加载模板内容
       const templateContent = JSON.parse(data.content)
       loadFromJSON(templateContent)
+
+      // 加载动态文案配置
+      if (data.custom_data) {
+        const customDataContent = JSON.parse(data.custom_data)
+        loadCustomData(customDataContent)
+      }
     } catch (error) {
       console.error("加载模板失败:", error)
     }
@@ -410,8 +435,10 @@ onMounted(() => {
         <PropertyPanelKonva
           :clip="activeClip"
           :clip-type="activeClipType"
+          :dynamic-text="activeDynamicText"
           @update-video="handleVideoPropertyUpdate"
           @update-subtitle="handleSubtitlePropertyUpdate"
+          @update-dynamic-text="handleDynamicTextUpdate"
         />
       </div>
     </div>

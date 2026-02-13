@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import type { AnyClip, SubtitleTrackClip, VideoTrackClip } from "@/types/timeline"
+import type { AnyClip, DynamicText, DynamicTextTypeValue, SubtitleTrackClip, VideoTrackClip } from "@/types/timeline"
+import { DynamicTextType } from "@/types/timeline"
 
 const props = defineProps<{
   clip: AnyClip | null
   clipType: "video" | "image" | "text" | "audio" | null
+  dynamicText?: DynamicText // 当前 clip 的动态文案配置
 }>()
 
 const emit = defineEmits<{
   updateVideo: [updates: Partial<VideoTrackClip>]
   updateSubtitle: [updates: Partial<SubtitleTrackClip>]
+  updateDynamicText: [type: DynamicTextTypeValue | null, customTexts?: string[]]
 }>()
 
 // 判断是否是视频/图片素材
@@ -93,14 +96,102 @@ function updateMotion(key: "AaiMotionInEffect" | "AaiMotionIn" | "AaiMotionOutEf
   updateSubtitleProp(key, value)
 }
 
-// 计算持续时长
+// 计算持续时长（当没有设置出场时间时返回 null）
 const duration = computed(() => {
-  if (!props.clip) return 0
+  if (!props.clip) return null
   const clip = props.clip as any
+  if (clip.TimelineOut === undefined) return null
   const timelineIn = clip.TimelineIn ?? 0
-  const timelineOut = clip.TimelineOut ?? 3
-  return timelineOut - timelineIn
+  return clip.TimelineOut - timelineIn
 })
+
+// 是否一直显示（TimelineIn 和 TimelineOut 都未设置）
+const isAlwaysShow = computed(() => {
+  if (!props.clip) return true
+  const clip = props.clip as any
+  return clip.TimelineIn === undefined && clip.TimelineOut === undefined
+})
+
+// 切换一直显示/自定义时间
+function toggleAlwaysShow(alwaysShow: string | number | boolean) {
+  if (alwaysShow) {
+    // 切换到一直显示：清除时间设置
+    if (isVideoClip.value) {
+      emit("updateVideo", { TimelineIn: undefined, TimelineOut: undefined })
+    } else if (isSubtitleClip.value) {
+      emit("updateSubtitle", { TimelineIn: undefined, TimelineOut: undefined })
+    }
+  } else {
+    // 切换到自定义时间：设置默认值
+    if (isVideoClip.value) {
+      emit("updateVideo", { TimelineIn: 0, TimelineOut: 3 })
+    } else if (isSubtitleClip.value) {
+      emit("updateSubtitle", { TimelineIn: 0, TimelineOut: 3 })
+    }
+  }
+}
+
+// ========================================
+// 动态文案设置
+// ========================================
+
+// 动态文案类型选项
+const dynamicTextOptions = [
+  { value: "", label: "无（固定文字）" },
+  { value: DynamicTextType.SUBTITLE, label: "字幕（TTS生成）" },
+  { value: DynamicTextType.TITLE, label: "标题（文案库）" },
+  { value: DynamicTextType.TOPIC, label: "话题（文案库）" },
+  { value: DynamicTextType.CUSTOM, label: "自定义（随机）" }
+]
+
+// 当前动态文案类型
+const currentDynamicType = computed(() => props.dynamicText?.type || "")
+
+// 自定义文案列表
+const customTexts = ref<string[]>([])
+
+// 监听 dynamicText 变化，更新 customTexts
+watch(
+  () => props.dynamicText,
+  (newVal) => {
+    if (newVal?.type === DynamicTextType.CUSTOM && newVal.custom_texts) {
+      customTexts.value = [...newVal.custom_texts]
+    } else {
+      customTexts.value = []
+    }
+  },
+  { immediate: true }
+)
+
+// 处理动态文案类型变化
+function handleDynamicTypeChange(type: string) {
+  if (type === "") {
+    emit("updateDynamicText", null)
+  } else if (type === DynamicTextType.CUSTOM) {
+    // 切换到自定义时，保留现有的自定义文案
+    emit("updateDynamicText", type as DynamicTextTypeValue, customTexts.value.length > 0 ? customTexts.value : [""])
+  } else {
+    emit("updateDynamicText", type as DynamicTextTypeValue)
+  }
+}
+
+// 添加自定义文案
+function addCustomText() {
+  customTexts.value.push("")
+  emit("updateDynamicText", DynamicTextType.CUSTOM, customTexts.value)
+}
+
+// 删除自定义文案
+function removeCustomText(index: number) {
+  customTexts.value.splice(index, 1)
+  emit("updateDynamicText", DynamicTextType.CUSTOM, customTexts.value)
+}
+
+// 更新自定义文案
+function updateCustomText(index: number, value: string) {
+  customTexts.value[index] = value
+  emit("updateDynamicText", DynamicTextType.CUSTOM, customTexts.value)
+}
 </script>
 
 <template>
@@ -178,42 +269,120 @@ const duration = computed(() => {
           </div>
 
           <el-form label-width="80px" size="small">
-            <el-form-item label="入场时间">
-              <el-input-number
-                :model-value="videoClip.TimelineIn ?? 0"
-                :step="0.1"
-                :min="0"
-                :precision="1"
-                @update:model-value="updateTimeline('TimelineIn', $event!)"
+            <el-form-item label="时长">
+              <el-switch
+                :model-value="isAlwaysShow"
+                active-text="全程"
+                inactive-text="指定"
+                @update:model-value="toggleAlwaysShow"
               />
-              <span style="margin-left: 8px">秒</span>
             </el-form-item>
 
-            <el-form-item label="出场时间">
-              <el-input-number
-                :model-value="videoClip.TimelineOut ?? 3"
-                :step="0.1"
-                :min="0.1"
-                :precision="1"
-                @update:model-value="updateTimeline('TimelineOut', $event!)"
-              />
-              <span style="margin-left: 8px">秒</span>
-            </el-form-item>
+            <template v-if="!isAlwaysShow">
+              <el-form-item label="入场时间">
+                <el-input-number
+                  :model-value="videoClip.TimelineIn ?? 0"
+                  :step="0.1"
+                  :min="0"
+                  :precision="1"
+                  @update:model-value="updateTimeline('TimelineIn', $event!)"
+                />
+                <span style="margin-left: 8px">秒</span>
+              </el-form-item>
 
-            <el-form-item label="持续时长">
-              <el-input-number
-                :model-value="duration"
-                disabled
-                :precision="1"
-              />
-              <span style="margin-left: 8px">秒</span>
-            </el-form-item>
+              <el-form-item label="出场时间">
+                <el-input-number
+                  :model-value="videoClip.TimelineOut ?? 3"
+                  :step="0.1"
+                  :min="0.1"
+                  :precision="1"
+                  @update:model-value="updateTimeline('TimelineOut', $event!)"
+                />
+                <span style="margin-left: 8px">秒</span>
+              </el-form-item>
+
+              <el-form-item label="持续时长">
+                <el-input-number
+                  :model-value="duration"
+                  disabled
+                  :precision="1"
+                />
+                <span style="margin-left: 8px">秒</span>
+              </el-form-item>
+            </template>
           </el-form>
         </div>
       </template>
 
       <!-- 字幕属性 -->
       <template v-if="isSubtitleClip && subtitleClip">
+        <!-- 动态文案设置 -->
+        <div class="property-section">
+          <div class="section-title">
+            动态文案
+          </div>
+
+          <el-form label-width="60px" size="small">
+            <el-form-item label="类型">
+              <el-select
+                :model-value="currentDynamicType"
+                placeholder="选择类型"
+                @update:model-value="handleDynamicTypeChange"
+              >
+                <el-option
+                  v-for="opt in dynamicTextOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
+            </el-form-item>
+
+            <!-- 自定义文案列表 -->
+            <template v-if="currentDynamicType === 'custom'">
+              <el-form-item
+                v-for="(text, index) in customTexts"
+                :key="index"
+                :label="`文案${index + 1}`"
+              >
+                <div class="custom-text-row">
+                  <el-input
+                    :model-value="text"
+                    placeholder="输入文案内容"
+                    @update:model-value="updateCustomText(index, $event)"
+                  />
+                  <el-button
+                    v-if="customTexts.length > 1"
+                    type="danger"
+                    text
+                    size="small"
+                    @click="removeCustomText(index)"
+                  >
+                    删除
+                  </el-button>
+                </div>
+              </el-form-item>
+              <el-form-item>
+                <el-button size="small" @click="addCustomText">
+                  + 添加文案
+                </el-button>
+              </el-form-item>
+            </template>
+
+            <div v-if="currentDynamicType && currentDynamicType !== 'custom'" class="dynamic-tip">
+              <template v-if="currentDynamicType === 'subtitle'">
+                运行时将替换为 TTS 生成的字幕
+              </template>
+              <template v-else-if="currentDynamicType === 'title'">
+                运行时将替换为文案库的标题
+              </template>
+              <template v-else-if="currentDynamicType === 'topic'">
+                运行时将替换为文案库的话题
+              </template>
+            </div>
+          </el-form>
+        </div>
+
         <div class="property-section">
           <div class="section-title">
             基础属性
@@ -422,36 +591,47 @@ const duration = computed(() => {
           </div>
 
           <el-form label-width="80px" size="small">
-            <el-form-item label="入场时间">
-              <el-input-number
-                :model-value="subtitleClip.TimelineIn ?? 0"
-                :step="0.1"
-                :min="0"
-                :precision="1"
-                @update:model-value="updateTimeline('TimelineIn', $event!)"
+            <el-form-item label="时长">
+              <el-switch
+                :model-value="isAlwaysShow"
+                active-text="全程"
+                inactive-text="指定"
+                @update:model-value="toggleAlwaysShow"
               />
-              <span style="margin-left: 8px">秒</span>
             </el-form-item>
 
-            <el-form-item label="出场时间">
-              <el-input-number
-                :model-value="subtitleClip.TimelineOut ?? 3"
-                :step="0.1"
-                :min="0.1"
-                :precision="1"
-                @update:model-value="updateTimeline('TimelineOut', $event!)"
-              />
-              <span style="margin-left: 8px">秒</span>
-            </el-form-item>
+            <template v-if="!isAlwaysShow">
+              <el-form-item label="入场时间">
+                <el-input-number
+                  :model-value="subtitleClip.TimelineIn ?? 0"
+                  :step="0.1"
+                  :min="0"
+                  :precision="1"
+                  @update:model-value="updateTimeline('TimelineIn', $event!)"
+                />
+                <span style="margin-left: 8px">秒</span>
+              </el-form-item>
 
-            <el-form-item label="持续时长">
-              <el-input-number
-                :model-value="duration"
-                disabled
-                :precision="1"
-              />
-              <span style="margin-left: 8px">秒</span>
-            </el-form-item>
+              <el-form-item label="出场时间">
+                <el-input-number
+                  :model-value="subtitleClip.TimelineOut ?? 3"
+                  :step="0.1"
+                  :min="0.1"
+                  :precision="1"
+                  @update:model-value="updateTimeline('TimelineOut', $event!)"
+                />
+                <span style="margin-left: 8px">秒</span>
+              </el-form-item>
+
+              <el-form-item label="持续时长">
+                <el-input-number
+                  :model-value="duration"
+                  disabled
+                  :precision="1"
+                />
+                <span style="margin-left: 8px">秒</span>
+              </el-form-item>
+            </template>
           </el-form>
         </div>
       </template>
@@ -521,5 +701,24 @@ const duration = computed(() => {
 
 .el-input-number {
   width: 100%;
+}
+
+.custom-text-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .el-input {
+    flex: 1;
+  }
+}
+
+.dynamic-tip {
+  font-size: 12px;
+  color: #909399;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  margin-top: 8px;
 }
 </style>
