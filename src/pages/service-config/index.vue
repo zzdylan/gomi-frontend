@@ -253,13 +253,12 @@ onMounted(() => {
             </el-select>
           </el-form-item>
 
-          <!-- 本地存储配置 -->
+          <!-- 本地存储配置（无需配置，使用系统默认值） -->
           <template v-if="driver === 'local'">
-            <el-form-item label="存储根目录" required>
-              <el-input v-model="localConfig.root" placeholder="如：./storage/app" />
-            </el-form-item>
-            <el-form-item label="访问URL" required>
-              <el-input v-model="localConfig.url" placeholder="如：http://localhost:3000/storage" />
+            <el-form-item>
+              <el-alert type="info" :closable="false" show-icon>
+                本地存储使用系统默认配置，无需额外设置
+              </el-alert>
             </el-form-item>
           </template>
 

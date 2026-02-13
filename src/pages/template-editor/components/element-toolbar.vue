@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { MaterialItem } from "@/pages/material/apis/type"
 import { Delete, Document, Download, EditPen, FolderOpened, RefreshLeft } from "@element-plus/icons-vue"
 import MaterialSelector from "@/common/components/MaterialSelector/index.vue"
 
@@ -8,7 +9,7 @@ defineProps<{
 
 const emit = defineEmits<{
   addText: []
-  addImage: [url: string]
+  addImage: [url: string, mediaId?: string]
   deleteSelected: []
   clearCanvas: []
   exportJSON: []
@@ -21,8 +22,9 @@ function showMaterialSelector() {
   materialSelectorVisible.value = true
 }
 
-function handleMaterialSelect(material: { url: string }) {
-  emit("addImage", material.url)
+function handleMaterialSelect(material: MaterialItem) {
+  // 传递 url（用于显示）和 media_id（用于保存）
+  emit("addImage", material.url, material.media_id)
   materialSelectorVisible.value = false
 }
 </script>

@@ -35,7 +35,8 @@ export interface VideoTrackClip {
 
   // 素材类型与来源
   Type: "Video" | "Image"
-  MediaURL: string
+  MediaId?: string // 阿里云媒资 ID（用于保存，阿里云 OSS 时使用）
+  MediaURL: string // 媒资访问 URL（用于显示）
 
   // 素材裁剪（视频用）
   In?: number // 素材裁剪开始时间（秒），0=从头开始
@@ -270,8 +271,8 @@ export function removeInternalIds(content: TemplateContent): TemplateContent {
 }
 
 // 创建默认的视频/图片素材（不设置 TimelineIn/TimelineOut，默认一直显示）
-export function createVideoClip(type: "Video" | "Image", mediaURL: string): VideoTrackClip {
-  return {
+export function createVideoClip(type: "Video" | "Image", mediaURL: string, mediaId?: string): VideoTrackClip {
+  const clip: VideoTrackClip = {
     Id: generateClipId(type === "Video" ? "video" : "image"),
     Type: type,
     MediaURL: mediaURL,
@@ -279,6 +280,11 @@ export function createVideoClip(type: "Video" | "Image", mediaURL: string): Vide
     Y: 0,
     Opacity: 1
   }
+  // 如果有 mediaId，添加到 clip 中（阿里云 OSS 时用于保存）
+  if (mediaId) {
+    clip.MediaId = mediaId
+  }
+  return clip
 }
 
 // 创建默认的字幕素材（不设置 TimelineIn/TimelineOut，默认一直显示）

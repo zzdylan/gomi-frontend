@@ -391,8 +391,8 @@ onMounted(() => {
         >
           <!-- 预览区域 - 点击预览 -->
           <div class="material-preview" @click="handlePreview(material)">
-            <img v-if="material.type === 'image'" :src="material.url" :alt="material.original_name">
-            <video v-else-if="material.type === 'video'" :src="material.url" preload="metadata" />
+            <img v-if="material.type === 'image'" :src="material.url" :alt="material.original_name" crossorigin="anonymous">
+            <video v-else-if="material.type === 'video'" :src="material.url" preload="metadata" crossorigin="anonymous" />
             <div class="material-type-badge">
               {{ material.type === "image" ? "图片" : "视频" }}
             </div>
@@ -487,11 +487,13 @@ onMounted(() => {
             v-if="previewMaterial.type === 'image'"
             :src="previewMaterial.url"
             :alt="previewMaterial.original_name"
+            crossorigin="anonymous"
           >
           <video
             v-else-if="previewMaterial.type === 'video'"
             :src="previewMaterial.url"
             controls
+            crossorigin="anonymous"
           />
         </div>
         <div class="preview-info">

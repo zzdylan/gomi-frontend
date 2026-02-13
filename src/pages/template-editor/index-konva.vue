@@ -223,7 +223,8 @@ async function handleSaveConfirm() {
           `template-${Date.now()}.png`,
           "templates/thumbnails"
         )
-        thumbnailUrl = uploadData.data.url
+        // 优先使用 media_id（阿里云 OSS），否则使用 url
+        thumbnailUrl = uploadData.data.media_id || uploadData.data.url
       } else {
         hasTaintedCanvas = true
       }

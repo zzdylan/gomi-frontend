@@ -27,6 +27,7 @@ export interface MaterialItem {
   width?: number
   height?: number
   duration?: number
+  media_id?: string // 阿里云 OSS 媒资 ID
   created_at: string
   updated_at: string
 }

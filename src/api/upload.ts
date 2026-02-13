@@ -6,6 +6,7 @@ export interface UploadData {
   mime_type?: string
   extension?: string
   size: number
+  media_id?: string // 阿里云 OSS 时返回
 }
 
 export interface UploadResponseData {

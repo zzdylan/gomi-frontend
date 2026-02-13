@@ -124,11 +124,12 @@ export function useTimeline() {
   // ========================================
 
   // 添加图片
-  const addImage = (url: string) => {
-    const clip = createVideoClip("Image", url)
+  const addImage = (url: string, mediaId?: string) => {
+    const clip = createVideoClip("Image", url, mediaId)
 
     // 加载图片获取尺寸
     const img = new Image()
+    img.crossOrigin = "anonymous"
     img.onload = () => {
       clip.Width = img.width
       clip.Height = img.height

@@ -249,8 +249,8 @@ onMounted(() => {
           @click="handleSelect(material)"
         >
           <div class="thumbnail">
-            <img v-if="material.type === 'image'" :src="material.url" :alt="material.original_name">
-            <video v-else :src="material.url" preload="metadata" />
+            <img v-if="material.type === 'image'" :src="material.url" :alt="material.original_name" crossorigin="anonymous">
+            <video v-else :src="material.url" preload="metadata" crossorigin="anonymous" />
           </div>
 
           <div class="material-info">
