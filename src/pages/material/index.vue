@@ -270,6 +270,19 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
 }
 
+// 格式化时长（毫秒 -> mm:ss 或 hh:mm:ss）
+function formatDuration(ms: number): string {
+  if (!ms || ms <= 0) return "-"
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+  }
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+}
+
 // 初始化
 onMounted(() => {
   loadFolders(0)
@@ -396,6 +409,9 @@ onMounted(() => {
             <div class="material-type-badge">
               {{ material.type === "image" ? "图片" : "视频" }}
             </div>
+            <div v-if="material.status === 0" class="material-status-badge">
+              处理中
+            </div>
           </div>
 
           <!-- 信息区域 - 点击选中 -->
@@ -503,6 +519,14 @@ onMounted(() => {
           <p v-if="previewMaterial.width && previewMaterial.height">
             <strong>尺寸:</strong> {{ previewMaterial.width }}x{{ previewMaterial.height }}
           </p>
+          <template v-if="previewMaterial.type === 'video'">
+            <p v-if="previewMaterial.duration">
+              <strong>时长:</strong> {{ formatDuration(previewMaterial.duration) }}
+            </p>
+            <p v-if="previewMaterial.bitrate">
+              <strong>码率:</strong> {{ previewMaterial.bitrate }}
+            </p>
+          </template>
           <p><strong>上传时间:</strong> {{ previewMaterial.created_at }}</p>
         </div>
       </div>
@@ -804,6 +828,18 @@ onMounted(() => {
       right: 6px;
       padding: 2px 6px;
       background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      font-size: 11px;
+      border-radius: 3px;
+      z-index: 1;
+    }
+
+    .material-status-badge {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      padding: 2px 6px;
+      background: #e6a23c;
       color: #fff;
       font-size: 11px;
       border-radius: 3px;

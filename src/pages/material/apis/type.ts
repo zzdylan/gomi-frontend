@@ -1,6 +1,9 @@
 /** 素材类型 */
 export type MaterialType = "image" | "video"
 
+/** 素材状态 */
+export type MaterialStatus = 0 | 1 // 0=pending 1=ready
+
 /** 素材文件夹数据项 */
 export interface MaterialFolderItem {
   id: number
@@ -24,9 +27,11 @@ export interface MaterialItem {
   mime_type: string
   extension: string
   type: MaterialType
+  status: MaterialStatus
   width?: number
   height?: number
   duration?: number
+  bitrate?: string
   media_id?: string // 阿里云 OSS 媒资 ID
   created_at: string
   updated_at: string
