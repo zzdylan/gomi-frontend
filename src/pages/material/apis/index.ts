@@ -1,6 +1,33 @@
 import type * as Material from "./type"
 import { request } from "@/http/axios"
 
+// ==================== 直传凭证 API ====================
+
+/** 直传凭证响应 - V4 签名版本 */
+export interface UploadCredential {
+  host: string // OSS 上传地址
+  dir: string // 上传目录
+  expire_at: number // 过期时间戳
+  policy: string // 策略（Base64）
+  signature: string // 签名
+  x_oss_signature_version: string // 签名版本: OSS4-HMAC-SHA256
+  x_oss_credential: string // 凭证
+  x_oss_date: string // 日期
+  callback: string // 回调配置（Base64）
+}
+
+/** 获取直传凭证 */
+export function getUploadCredentialApi(params: {
+  directory?: string
+  folder_id?: number
+}) {
+  return request<ApiResponseData<UploadCredential>>({
+    url: "upload/credential",
+    method: "get",
+    params
+  })
+}
+
 // ==================== 素材文件夹 API ====================
 
 /** 获取文件夹列表 */

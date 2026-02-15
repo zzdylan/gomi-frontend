@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { UploadFile, UploadFiles, UploadInstance } from "element-plus"
+import type { UploadCredential } from "@/pages/material/apis"
 import { Check, Close, Loading, Picture, UploadFilled } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
-import { uploadMaterialApi } from "@/pages/material/apis"
+import { getUploadCredentialApi } from "@/pages/material/apis"
 
 const props = defineProps<{
   folderId: number
@@ -71,6 +72,62 @@ function isVideo(file: UploadFile): boolean {
   return file.raw?.type.startsWith("video/") || false
 }
 
+// 生成唯一文件名
+function generateFileName(file: File): string {
+  const ext = file.name.split(".").pop() || ""
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  return `${timestamp}_${random}.${ext}`
+}
+
+// 直传到 OSS（V4 签名版本）
+async function uploadToOSS(file: File, credential: UploadCredential, onProgress?: (percent: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData()
+
+    // 生成文件名并构建完整路径
+    const fileName = generateFileName(file)
+    const key = credential.dir + fileName
+
+    // 按 OSS V4 签名要求的顺序添加表单字段
+    formData.append("key", key)
+    formData.append("policy", credential.policy)
+    formData.append("x-oss-signature-version", credential.x_oss_signature_version)
+    formData.append("x-oss-credential", credential.x_oss_credential)
+    formData.append("x-oss-date", credential.x_oss_date)
+    formData.append("x-oss-signature", credential.signature)
+    formData.append("callback", credential.callback)
+    formData.append("file", file) // file 必须放最后
+
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        const percent = Math.round((e.loaded / e.total) * 100)
+        onProgress(percent)
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        resolve()
+      } else {
+        reject(new Error(`上传失败: ${xhr.status}`))
+      }
+    }
+
+    xhr.onerror = () => {
+      reject(new Error("网络错误"))
+    }
+
+    xhr.open("POST", credential.host, true)
+    xhr.send(formData)
+  })
+}
+
+// 并发控制：限制同时上传的文件数
+const MAX_CONCURRENT = 3
+
 async function handleUploadSubmit() {
   if (uploadFileList.value.length === 0) {
     ElMessage.warning("请选择要上传的文件")
@@ -82,25 +139,32 @@ async function handleUploadSubmit() {
   let successCount = 0
   let failedCount = 0
 
-  for (const file of uploadFileList.value) {
+  // 获取直传凭证
+  let credential: UploadCredential
+  try {
+    const { data } = await getUploadCredentialApi({
+      directory: "materials",
+      folder_id: props.folderId
+    })
+    credential = data
+  } catch (error: any) {
+    ElMessage.error(`获取上传凭证失败: ${error.message || "未知错误"}`)
+    isUploading.value = false
+    return
+  }
+
+  // 单个文件上传任务
+  const uploadTask = async (file: UploadFile) => {
     const status = fileStatusMap.value.get(file.uid)
-    if (!status) continue
+    if (!status) return
 
     status.status = "uploading"
     status.progress = 0
 
-    const formData = new FormData()
-    formData.append("file", file.raw as File)
-    formData.append("folder_id", props.folderId.toString())
-
     try {
-      await uploadMaterialApi(formData, (progressEvent) => {
-        if (progressEvent.total) {
-          const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100)
-          status.progress = percent
-        }
+      await uploadToOSS(file.raw as File, credential, (percent) => {
+        status.progress = percent
       })
-
       status.status = "success"
       status.progress = 100
       successCount++
@@ -111,6 +175,22 @@ async function handleUploadSubmit() {
       console.error(`文件 ${file.name} 上传失败:`, error)
     }
   }
+
+  // 并发上传（限制最大并发数）
+  const files = [...uploadFileList.value]
+  const executing: Promise<void>[] = []
+
+  for (const file of files) {
+    const promise = uploadTask(file).then(() => {
+      executing.splice(executing.indexOf(promise), 1)
+    })
+    executing.push(promise)
+
+    if (executing.length >= MAX_CONCURRENT) {
+      await Promise.race(executing)
+    }
+  }
+  await Promise.all(executing)
 
   isUploading.value = false
 
