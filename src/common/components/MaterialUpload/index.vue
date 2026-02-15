@@ -3,6 +3,7 @@ import type { UploadFile, UploadFiles, UploadInstance } from "element-plus"
 import type { UploadCredential } from "@/pages/material/apis"
 import { Check, Close, Loading, Picture, UploadFilled } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
+import { uploadToOSS } from "@/common/utils/ossUpload"
 import { getUploadCredentialApi } from "@/pages/material/apis"
 
 const props = defineProps<{
@@ -70,59 +71,6 @@ function formatFileSize(bytes: number): string {
 
 function isVideo(file: UploadFile): boolean {
   return file.raw?.type.startsWith("video/") || false
-}
-
-// 生成唯一文件名
-function generateFileName(file: File): string {
-  const ext = file.name.split(".").pop() || ""
-  const timestamp = Date.now()
-  const random = Math.random().toString(36).substring(2, 8)
-  return `${timestamp}_${random}.${ext}`
-}
-
-// 直传到 OSS（V4 签名版本）
-async function uploadToOSS(file: File, credential: UploadCredential, onProgress?: (percent: number) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const formData = new FormData()
-
-    // 生成文件名并构建完整路径
-    const fileName = generateFileName(file)
-    const key = credential.dir + fileName
-
-    // 按 OSS V4 签名要求的顺序添加表单字段
-    formData.append("key", key)
-    formData.append("policy", credential.policy)
-    formData.append("x-oss-signature-version", credential.x_oss_signature_version)
-    formData.append("x-oss-credential", credential.x_oss_credential)
-    formData.append("x-oss-date", credential.x_oss_date)
-    formData.append("x-oss-signature", credential.signature)
-    formData.append("callback", credential.callback)
-    formData.append("file", file) // file 必须放最后
-
-    const xhr = new XMLHttpRequest()
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) {
-        const percent = Math.round((e.loaded / e.total) * 100)
-        onProgress(percent)
-      }
-    }
-
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        resolve()
-      } else {
-        reject(new Error(`上传失败: ${xhr.status}`))
-      }
-    }
-
-    xhr.onerror = () => {
-      reject(new Error("网络错误"))
-    }
-
-    xhr.open("POST", credential.host, true)
-    xhr.send(formData)
-  })
 }
 
 // 并发控制：限制同时上传的文件数
