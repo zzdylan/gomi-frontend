@@ -17,6 +17,7 @@ const stageRef = ref<any>(null)
 const transformerRef = ref<any>(null)
 const textEditorRef = ref<HTMLTextAreaElement | null>(null)
 const editingTextId = ref<string | null>(null)
+const editingTextWidth = ref<number>(200)
 
 // 图片缓存：存储已加载的图片对象
 const imageCache = ref<Map<string, HTMLImageElement>>(new Map())
@@ -116,7 +117,7 @@ function getTextConfig(clip: SubtitleTrackClip) {
     fontSize: clip.FontSize ?? 24,
     fontFamily: clip.Font || "Arial",
     fill: clip.FontColor ?? "#1f2937",
-    width: 200,
+    wrap: "none",
     align: clip.Alignment ?? "left",
     fontStyle: `${clip.FontFace?.Italic ? "italic" : "normal"} ${clip.FontFace?.Bold ? "bold" : "normal"}`,
     textDecoration: clip.FontFace?.Underline ? "underline" : "none",
@@ -172,6 +173,12 @@ function updateTransformer() {
 
 // 处理舞台点击
 function handleStageMouseDown(e: any) {
+  // 如果正在编辑文本，先保存（canvas mousedown 会阻止 textarea blur 触发）
+  if (editingTextId.value) {
+    finishTextEdit()
+    return
+  }
+
   if (e.target === e.target.getStage()) {
     emit("select", null)
     return
@@ -211,12 +218,13 @@ function handleTransformEnd(clip: VisualClip, e: any) {
   const scaleY = node.scaleY()
 
   if (isSubtitleClip(clip)) {
-    // 对于文本，调整宽度和字号
+    // 对于文本，拖角改字号（取 scaleX/scaleY 较大值，保持等比）
+    const scale = Math.max(scaleX, scaleY)
     const updates: Partial<SubtitleTrackClip> = {
       X: node.x(),
       Y: node.y(),
       Angle: node.rotation(),
-      FontSize: Math.max(12, (clip.FontSize || 24) * scaleY)
+      FontSize: Math.round(Math.max(12, (clip.FontSize || 24) * scale))
     }
     node.scaleX(1)
     node.scaleY(1)
@@ -246,6 +254,7 @@ function handleTextDblClick(clip: SubtitleTrackClip, e: any) {
   }
 
   editingTextId.value = clip.Id!
+  editingTextWidth.value = Math.max(100, textNode.width())
   textNode.hide()
 
   nextTick(() => {
@@ -447,7 +456,7 @@ defineExpose({
         position: 'absolute',
         left: `${editingTextClip.X ?? 0}px`,
         top: `${editingTextClip.Y ?? 0}px`,
-        width: '200px',
+        width: `${editingTextWidth}px`,
         fontSize: `${editingTextClip.FontSize ?? 24}px`,
         fontFamily: editingTextClip.Font || 'Arial',
         color: editingTextClip.FontColor ?? '#000',

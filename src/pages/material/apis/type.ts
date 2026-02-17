@@ -23,6 +23,7 @@ export interface MaterialItem {
   stored_name: string
   path: string
   url: string
+  cover_url?: string
   size: number
   mime_type: string
   extension: string
@@ -127,4 +128,14 @@ export type BatchDeleteMaterialResponseData = ApiResponseData<{
 /** 移动素材响应数据 */
 export type MoveMaterialResponseData = ApiResponseData<{
   moved_count: number
+}>
+
+/** 批量获取素材信息请求数据 */
+export interface BatchInfoMaterialRequestData {
+  ids: number[]
+}
+
+/** 批量获取素材信息响应数据 */
+export type BatchInfoMaterialResponseData = ApiResponseData<{
+  materials: MaterialItem[]
 }>

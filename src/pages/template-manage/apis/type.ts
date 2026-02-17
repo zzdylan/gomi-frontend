@@ -66,6 +66,23 @@ export interface MoveTemplateRequestData {
   folder_id: number
 }
 
+/** 批量获取模板信息请求数据 */
+export interface BatchInfoTemplateRequestData {
+  ids: number[]
+}
+
+/** 批量获取模板信息中的模板项 */
+export interface TemplateInfoItem {
+  id: number
+  name: string
+  thumbnail: string
+}
+
+/** 批量获取模板信息响应数据 */
+export type BatchInfoTemplateResponseData = ApiResponseData<{
+  templates: TemplateInfoItem[]
+}>
+
 /** 文件夹列表响应数据 */
 export type GetTemplateFolderListResponseData = ApiResponseData<{
   folders: TemplateFolderItem[]

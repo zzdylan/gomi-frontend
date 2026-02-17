@@ -116,6 +116,15 @@ export function moveTemplateApi(data: Template.MoveTemplateRequestData) {
   })
 }
 
+/** 批量获取模板信息 */
+export function batchInfoTemplateApi(data: Template.BatchInfoTemplateRequestData) {
+  return request<Template.BatchInfoTemplateResponseData>({
+    url: "templates/batch-info",
+    method: "post",
+    data
+  })
+}
+
 /** 复制模板 */
 export function copyTemplateApi(id: number | string) {
   return request<Template.CreateTemplateResponseData>({

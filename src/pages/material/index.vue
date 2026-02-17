@@ -404,8 +404,7 @@ onMounted(() => {
         >
           <!-- 预览区域 - 点击预览 -->
           <div class="material-preview" @click="handlePreview(material)">
-            <img v-if="material.type === 'image'" :src="material.url" :alt="material.original_name" crossorigin="anonymous">
-            <video v-else-if="material.type === 'video'" :src="material.url" preload="metadata" crossorigin="anonymous" />
+            <img :src="material.type === 'video' ? material.cover_url : material.url" :alt="material.original_name" crossorigin="anonymous">
             <div class="material-type-badge">
               {{ material.type === "image" ? "图片" : "视频" }}
             </div>
@@ -815,8 +814,7 @@ onMounted(() => {
       transition: opacity 0.25s;
     }
 
-    img,
-    video {
+    img {
       width: 100%;
       height: 100%;
       object-fit: contain;

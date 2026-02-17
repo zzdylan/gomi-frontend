@@ -75,8 +75,7 @@ const aliyunIceConfig = reactive<AliyunIceConfigJSON>({
 
 const volcengineTtsConfig = reactive<VolcengineTtsConfigJSON>({
   app_id: "",
-  token: "",
-  cluster: ""
+  token: ""
 })
 
 const microsoftTtsConfig = reactive<MicrosoftTtsConfigJSON>({
@@ -107,7 +106,7 @@ function resetForm() {
   Object.assign(minioConfig, { access_key: "", secret_key: "", region: "", bucket: "", url: "", endpoint: "", ssl: false })
   Object.assign(aliyunOssConfig, { access_key_id: "", access_key_secret: "", bucket: "", url: "", endpoint: "" })
   Object.assign(aliyunIceConfig, { access_key_id: "", access_key_secret: "", endpoint: "", callback_url: "", callback_secret: "" })
-  Object.assign(volcengineTtsConfig, { app_id: "", token: "", cluster: "" })
+  Object.assign(volcengineTtsConfig, { app_id: "", token: "" })
   Object.assign(microsoftTtsConfig, { region: "", api_key: "" })
 }
 
@@ -332,9 +331,6 @@ onMounted(() => {
             </el-form-item>
             <el-form-item label="Access Token" required>
               <el-input v-model="volcengineTtsConfig.token" type="password" show-password placeholder="Access Token" />
-            </el-form-item>
-            <el-form-item label="集群" required>
-              <el-input v-model="volcengineTtsConfig.cluster" placeholder="如：volcano_tts" />
             </el-form-item>
           </template>
 

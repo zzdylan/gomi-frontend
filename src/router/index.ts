@@ -315,6 +315,27 @@ export const dynamicRoutes: RouteRecordRaw[] = [
           hidden: true,
           roles: ["super_admin", "normal_user"]
         }
+      },
+      {
+        path: "xunclip",
+        component: () => import("@/pages/xunclip/projects.vue"),
+        name: "XunClipProjects",
+        meta: {
+          title: "讯剪",
+          keepAlive: true,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
+        path: "xunclip/editor",
+        component: () => import("@/pages/xunclip/index.vue"),
+        name: "XunClipSubmit",
+        meta: {
+          title: "讯剪编辑器",
+          keepAlive: false,
+          hidden: true,
+          roles: ["super_admin", "normal_user"]
+        }
       }
     ]
   },

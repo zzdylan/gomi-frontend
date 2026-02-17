@@ -431,9 +431,7 @@ function handleDelete(row: RowMeta) {
       ElMessage.success("删除成功")
       xGridDom.value?.commitProxy("query")
     })
-    .catch(() => {
-      ElMessage.info("已取消删除")
-    })
+    .catch(() => {})
 }
 
 function handleBatchDelete() {
@@ -461,9 +459,7 @@ function handleBatchDelete() {
       ElMessage.success("删除成功")
       xGridDom.value?.commitProxy("query")
     })
-    .catch(() => {
-      ElMessage.info("已取消删除")
-    })
+    .catch(() => {})
 }
 // #endregion
 

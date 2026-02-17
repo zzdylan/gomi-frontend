@@ -1,56 +1,27 @@
 <script setup lang="ts">
-import type { MaterialFolderItem, MaterialItem, MaterialType } from "@/pages/material/apis/type"
-import { Folder, Upload } from "@element-plus/icons-vue"
-import MaterialUpload from "@/common/components/MaterialUpload/index.vue"
-import { getMaterialFolderListApi, getMaterialListApi } from "@/pages/material/apis"
+import type { TemplateFolderItem, TemplateItem } from "@/pages/template-manage/apis/type"
+import { Folder } from "@element-plus/icons-vue"
+import { isMediaId, resolveMediaIds } from "@/api/media"
+import { getTemplateFolderListApi, getTemplateListApi } from "@/pages/template-manage/apis"
 
 // Props 定义
 interface Props {
-  /** 允许选择的素材类型，默认 ['image', 'video'] 全部 */
-  acceptTypes?: MaterialType[]
-  /** 是否显示类型筛选下拉框，默认根据 acceptTypes 自动判断 */
-  showTypeFilter?: boolean
   /** 是否多选模式 */
   multiple?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  acceptTypes: () => ["image", "video"],
-  showTypeFilter: undefined,
   multiple: false
 })
 
 const emit = defineEmits<{
-  /** 单选模式：选择素材时触发 */
-  select: [material: MaterialItem]
+  /** 单选模式：选择模板时触发 */
+  select: [template: TemplateItem]
   /** 多选模式：确认选择时触发 */
-  selectMultiple: [materials: MaterialItem[]]
+  selectMultiple: [templates: TemplateItem[]]
   /** 关闭选择器 */
   close: []
 }>()
-
-// 是否显示类型筛选（如果只有一种类型则不显示）
-const shouldShowTypeFilter = computed(() => {
-  if (props.showTypeFilter !== undefined) {
-    return props.showTypeFilter
-  }
-  return props.acceptTypes.length > 1
-})
-
-// 类型筛选选项
-const typeOptions = computed(() => {
-  const options: { label: string, value: MaterialType | "" }[] = []
-  if (props.acceptTypes.length > 1) {
-    options.push({ label: "全部", value: "" })
-  }
-  if (props.acceptTypes.includes("image")) {
-    options.push({ label: "图片", value: "image" })
-  }
-  if (props.acceptTypes.includes("video")) {
-    options.push({ label: "视频", value: "video" })
-  }
-  return options
-})
 
 // 文件夹导航
 interface BreadcrumbItem {
@@ -58,38 +29,33 @@ interface BreadcrumbItem {
   name: string
 }
 
-const breadcrumbs = ref<BreadcrumbItem[]>([{ id: 0, name: "全部素材" }])
+const breadcrumbs = ref<BreadcrumbItem[]>([{ id: 0, name: "全部模板" }])
 const currentFolderId = computed(() => breadcrumbs.value[breadcrumbs.value.length - 1].id)
 
 // 文件夹列表
-const folders = ref<MaterialFolderItem[]>([])
+const folders = ref<TemplateFolderItem[]>([])
 const loadingFolders = ref(false)
 
-// 素材列表
-const materials = ref<MaterialItem[]>([])
-const loadingMaterials = ref(false)
+// 模板列表
+const templates = ref<TemplateItem[]>([])
+const loadingTemplates = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
-// 当前筛选类型
-const filterType = ref<MaterialType | "">(
-  props.acceptTypes.length === 1 ? props.acceptTypes[0] : ""
-)
-
 // 多选状态
-const selectedMap = reactive(new Map<number, MaterialItem>())
+const selectedMap = reactive(new Map<number, TemplateItem>())
 const selectedCount = computed(() => selectedMap.size)
 
 function isSelected(id: number) {
   return selectedMap.has(id)
 }
 
-function toggleSelect(material: MaterialItem) {
-  if (selectedMap.has(material.id)) {
-    selectedMap.delete(material.id)
+function toggleSelect(template: TemplateItem) {
+  if (selectedMap.has(template.id)) {
+    selectedMap.delete(template.id)
   } else {
-    selectedMap.set(material.id, material)
+    selectedMap.set(template.id, template)
   }
 }
 
@@ -104,7 +70,7 @@ function confirmMultiSelect() {
 async function loadFolders() {
   loadingFolders.value = true
   try {
-    const { data } = await getMaterialFolderListApi({ parent_id: currentFolderId.value })
+    const { data } = await getTemplateFolderListApi({ parent_id: currentFolderId.value })
     folders.value = data.folders
   } catch (error) {
     console.error("加载文件夹失败:", error)
@@ -114,11 +80,11 @@ async function loadFolders() {
 }
 
 // 进入文件夹
-function enterFolder(folder: MaterialFolderItem) {
+function enterFolder(folder: TemplateFolderItem) {
   breadcrumbs.value.push({ id: folder.id, name: folder.name })
   loadFolders()
   currentPage.value = 1
-  loadMaterials()
+  loadTemplates()
 }
 
 // 通过面包屑导航
@@ -126,82 +92,62 @@ function navigateToFolder(index: number) {
   breadcrumbs.value = breadcrumbs.value.slice(0, index + 1)
   loadFolders()
   currentPage.value = 1
-  loadMaterials()
+  loadTemplates()
 }
 
-// 加载素材列表
-async function loadMaterials() {
-  loadingMaterials.value = true
+// 加载模板列表
+async function loadTemplates() {
+  loadingTemplates.value = true
   try {
-    const params: Record<string, any> = {
+    const { data } = await getTemplateListApi({
       folder_id: currentFolderId.value,
       page: currentPage.value,
       per_page: pageSize.value
-    }
-
-    if (filterType.value) {
-      params.type = filterType.value
-    } else if (props.acceptTypes.length === 1) {
-      params.type = props.acceptTypes[0]
-    }
-
-    const { data } = await getMaterialListApi(params)
-    materials.value = data.materials
+    })
+    templates.value = data.templates
     total.value = data.paging.total_count
+
+    // 批量解析 thumbnail 中的 media_id 为 URL
+    const mediaIds = templates.value.map(t => t.thumbnail).filter(isMediaId)
+    if (mediaIds.length > 0) {
+      const urls = await resolveMediaIds(mediaIds)
+      for (const t of templates.value) {
+        if (t.thumbnail && urls[t.thumbnail]) {
+          t.thumbnail = urls[t.thumbnail]
+        }
+      }
+    }
   } catch (error) {
-    console.error("加载素材失败:", error)
+    console.error("加载模板失败:", error)
   } finally {
-    loadingMaterials.value = false
+    loadingTemplates.value = false
   }
 }
 
 // 切换页码
 function handlePageChange() {
-  loadMaterials()
+  loadTemplates()
 }
 
-// 切换类型筛选
-function handleTypeChange() {
-  currentPage.value = 1
-  loadMaterials()
-}
-
-// 点击素材卡片
-function handleCardClick(material: MaterialItem) {
+// 点击模板卡片
+function handleCardClick(template: TemplateItem) {
   if (props.multiple) {
-    toggleSelect(material)
+    toggleSelect(template)
   } else {
-    emit("select", material)
+    emit("select", template)
     emit("close")
   }
-}
-
-// 格式化文件大小
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B"
-  const k = 1024
-  const sizes = ["B", "KB", "MB", "GB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
-}
-
-// 上传素材
-const uploadDialogVisible = ref(false)
-
-function handleUploadSuccess() {
-  currentPage.value = 1
-  loadMaterials()
 }
 
 // 初始化
 onMounted(() => {
   loadFolders()
-  loadMaterials()
+  loadTemplates()
 })
 </script>
 
 <template>
-  <div class="material-selector">
+  <div class="template-selector">
     <!-- 左侧文件夹 -->
     <div class="folder-sidebar">
       <div class="folder-header">
@@ -242,65 +188,36 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 右侧素材区域 -->
-    <div class="material-content">
-      <!-- 工具栏 -->
-      <div class="material-toolbar">
-        <div class="toolbar-left">
-          <el-select
-            v-if="shouldShowTypeFilter"
-            v-model="filterType"
-            style="width: 100px"
-            size="default"
-            @change="handleTypeChange"
-          >
-            <el-option
-              v-for="opt in typeOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </el-select>
-        </div>
-        <el-button type="primary" @click="uploadDialogVisible = true">
-          <el-icon><Upload /></el-icon>
-          上传素材
-        </el-button>
-      </div>
-
-      <!-- 素材网格 -->
-      <div v-loading="loadingMaterials" class="material-grid">
-        <div v-if="materials.length === 0" class="empty-tip">
-          <el-empty description="暂无素材" :image-size="100" />
+    <!-- 右侧模板区域 -->
+    <div class="template-content">
+      <!-- 模板网格 -->
+      <div v-loading="loadingTemplates" class="template-grid">
+        <div v-if="templates.length === 0 && !loadingTemplates" class="empty-tip">
+          <el-empty description="暂无模板" :image-size="100" />
         </div>
 
         <div
-          v-for="material in materials"
-          :key="material.id"
-          class="material-card"
-          :class="{ selected: multiple && isSelected(material.id) }"
-          @click="handleCardClick(material)"
+          v-for="tpl in templates"
+          :key="tpl.id"
+          class="template-card"
+          :class="{ selected: multiple && isSelected(tpl.id) }"
+          @click="handleCardClick(tpl)"
         >
           <div class="thumbnail">
-            <img :src="material.type === 'video' ? material.cover_url : material.url" :alt="material.original_name" crossorigin="anonymous">
-            <div v-if="material.type === 'video'" class="video-badge">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                <path d="M8 5v14l11-7z" />
-              </svg>
+            <img v-if="tpl.thumbnail" :src="tpl.thumbnail" :alt="tpl.name" crossorigin="anonymous">
+            <div v-else class="no-thumbnail">
+              无缩略图
             </div>
 
             <!-- 多选模式：勾选标记 -->
-            <div v-if="multiple" class="check-mark" :class="{ checked: isSelected(material.id) }">
+            <div v-if="multiple" class="check-mark" :class="{ checked: isSelected(tpl.id) }">
               <el-icon><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M406.656 706.944 195.84 496.128a32 32 0 1 0-45.248 45.248l256 256 512-512a32 32 0 0 0-45.248-45.248L406.592 706.944z" /></svg></el-icon>
             </div>
           </div>
 
-          <div class="material-info">
-            <div class="name" :title="material.original_name">
-              {{ material.original_name }}
-            </div>
-            <div class="meta">
-              <span>{{ formatFileSize(material.size) }}</span>
+          <div class="template-info">
+            <div class="name" :title="tpl.name">
+              {{ tpl.name }}
             </div>
           </div>
         </div>
@@ -320,24 +237,17 @@ onMounted(() => {
 
       <!-- 多选模式：底部操作栏 -->
       <div v-if="multiple" class="multi-select-bar">
-        <span class="selected-info">已选 {{ selectedCount }} 个素材</span>
+        <span class="selected-info">已选 {{ selectedCount }} 个模板</span>
         <el-button type="primary" :disabled="selectedCount === 0" @click="confirmMultiSelect">
           确认添加
         </el-button>
       </div>
     </div>
-
-    <!-- 上传对话框 -->
-    <MaterialUpload
-      v-model:visible="uploadDialogVisible"
-      :folder-id="currentFolderId"
-      @success="handleUploadSuccess"
-    />
   </div>
 </template>
 
 <style scoped lang="scss">
-.material-selector {
+.template-selector {
   display: flex;
   height: 550px;
   background: #fafafa;
@@ -438,33 +348,14 @@ onMounted(() => {
     }
   }
 
-  .material-content {
+  .template-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     background: #fff;
 
-    .material-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background: #fff;
-      border-bottom: 1px solid #ebeef5;
-
-      .toolbar-left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      :deep(.el-button) {
-        font-size: 13px;
-      }
-    }
-
-    .material-grid {
+    .template-grid {
       flex: 1;
       overflow-y: auto;
       padding: 16px;
@@ -479,7 +370,7 @@ onMounted(() => {
         padding: 60px 0;
       }
 
-      .material-card {
+      .template-card {
         background: #fff;
         border: 1px solid #ebeef5;
         border-radius: 8px;
@@ -508,19 +399,10 @@ onMounted(() => {
 
         .thumbnail {
           width: 100%;
-          height: 100px;
+          height: 120px;
           overflow: hidden;
           position: relative;
           background-color: #f5f5f5;
-          background-image:
-            linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
-            linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
-          background-size: 12px 12px;
-          background-position:
-            0 0,
-            0 6px,
-            6px -6px,
-            -6px 0;
 
           &::after {
             content: "选择";
@@ -567,24 +449,18 @@ onMounted(() => {
             display: block;
           }
 
-          .video-badge {
-            position: absolute;
-            bottom: 4px;
-            left: 4px;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.55);
+          .no-thumbnail {
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            padding-left: 1px;
-            pointer-events: none;
+            font-size: 12px;
+            color: #c0c4cc;
           }
         }
 
-        .material-info {
+        .template-info {
           padding: 8px 10px;
           background: #fafafa;
           border-top: 1px solid #ebeef5;
@@ -596,12 +472,6 @@ onMounted(() => {
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.4;
-          }
-
-          .meta {
-            font-size: 11px;
-            color: #909399;
-            margin-top: 2px;
           }
         }
       }
@@ -636,8 +506,8 @@ onMounted(() => {
 }
 
 /* 多选模式下隐藏单选的 hover 蒙层 */
-.material-selector .material-card .thumbnail .check-mark ~ ::after,
-.material-selector .material-content .material-grid .material-card:has(.check-mark):hover .thumbnail::after {
+.template-selector .template-card .thumbnail .check-mark ~ ::after,
+.template-selector .template-content .template-grid .template-card:has(.check-mark):hover .thumbnail::after {
   opacity: 0 !important;
 }
 </style>

@@ -145,3 +145,12 @@ export function moveMaterialApi(data: Material.MoveMaterialRequestData) {
     data
   })
 }
+
+/** 批量获取素材信息（含URL和封面） */
+export function batchInfoMaterialApi(data: Material.BatchInfoMaterialRequestData) {
+  return request<Material.BatchInfoMaterialResponseData>({
+    url: "materials/batch-info",
+    method: "post",
+    data
+  })
+}

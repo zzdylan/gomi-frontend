@@ -56,7 +56,6 @@ export interface AliyunIceConfigJSON {
 export interface VolcengineTtsConfigJSON {
   app_id: string // 应用ID
   token: string // Access Token
-  cluster: string // 集群 (如 volcano_tts)
 }
 
 /** 微软TTS配置 */
