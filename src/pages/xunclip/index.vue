@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { SceneConfig, SceneType, SceneTypeLabel } from "./apis/type"
+import type { SceneConfig } from "./apis/type"
 import type { MaterialItem } from "@/pages/material/apis/type"
 import { ArrowLeft, Close, Delete, Plus } from "@element-plus/icons-vue"
 import MaterialSelector from "@/common/components/MaterialSelector/index.vue"
 import { createXunProjectApi, createXunTaskApi, getXunProjectDetailApi, updateXunProjectApi } from "./apis"
+import { SceneType, SceneTypeLabel } from "./apis/type"
 import GlobalSettingsPanel from "./components/GlobalSettingsPanel.vue"
 import SubmitDialog from "./components/SubmitDialog.vue"
 import { useXunclipForm } from "./composables/useXunclipForm"

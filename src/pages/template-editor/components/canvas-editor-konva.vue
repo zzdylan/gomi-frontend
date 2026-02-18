@@ -118,7 +118,6 @@ function getTextConfig(clip: SubtitleTrackClip) {
     fontFamily: clip.Font || "Arial",
     fill: clip.FontColor ?? "#1f2937",
     wrap: "none",
-    align: clip.Alignment ?? "left",
     fontStyle: `${clip.FontFace?.Italic ? "italic" : "normal"} ${clip.FontFace?.Bold ? "bold" : "normal"}`,
     textDecoration: clip.FontFace?.Underline ? "underline" : "none",
     rotation: clip.Angle ?? 0,
@@ -351,7 +350,6 @@ async function exportToDataURL(): Promise<string | null> {
           fontSize: clip.FontSize ?? 24,
           fontFamily: clip.Font || "Arial",
           fill: clip.FontColor ?? "#1f2937",
-          align: clip.Alignment ?? "left",
           rotation: clip.Angle ?? 0,
           opacity: clip.FontColorOpacity ?? 1
         })
@@ -478,8 +476,8 @@ defineExpose({
 
 <style scoped lang="scss">
 .canvas-editor-konva {
-  width: 375px;
-  height: 667px;
+  width: 360px;
+  height: 640px;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   background: #ffffff;

@@ -19,8 +19,8 @@ import {
 } from "@/types/timeline"
 
 // 默认画布尺寸
-const DEFAULT_CANVAS_WIDTH = 375
-const DEFAULT_CANVAS_HEIGHT = 667
+const DEFAULT_CANVAS_WIDTH = 360
+const DEFAULT_CANVAS_HEIGHT = 640
 
 export function useTimeline() {
   // ========================================

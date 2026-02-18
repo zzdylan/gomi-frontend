@@ -317,6 +317,16 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         }
       },
       {
+        path: "composition",
+        component: () => import("@/pages/composition/index.vue"),
+        name: "CompositionLibrary",
+        meta: {
+          title: "作品集",
+          keepAlive: false,
+          roles: ["super_admin", "normal_user"]
+        }
+      },
+      {
         path: "xunclip",
         component: () => import("@/pages/xunclip/projects.vue"),
         name: "XunClipProjects",

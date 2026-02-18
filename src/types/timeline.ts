@@ -91,7 +91,7 @@ export interface SubtitleTrackClip {
   FontFace?: FontFace // 字体样式（粗体/斜体/下划线）
 
   // 对齐
-  Alignment?: string // 对齐方式
+  Alignment?: string // ICE 定位锚点（TopLeft/Center/Right 等），前端固定为 TopLeft
 
   // 字幕特效（描边、阴影、背景框统一在这里设置）
   SubtitleEffects?: SubtitleEffect[]
@@ -299,7 +299,7 @@ export function createSubtitleClip(content: string = "双击编辑文本"): Subt
     FontSize: 24,
     FontColor: "#1f2937",
     FontColorOpacity: 1,
-    Alignment: "left"
+    Alignment: "TopLeft"
   }
 }
 

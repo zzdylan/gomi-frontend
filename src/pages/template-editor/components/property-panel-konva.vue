@@ -482,24 +482,6 @@ function updateCustomText(index: number, value: string) {
               </el-checkbox>
             </el-form-item>
 
-            <el-form-item label="对齐">
-              <el-radio-group
-                :model-value="subtitleClip.Alignment ?? 'left'"
-                size="small"
-                @update:model-value="updateSubtitleProp('Alignment', $event as string)"
-              >
-                <el-radio-button value="left">
-                  左
-                </el-radio-button>
-                <el-radio-button value="center">
-                  中
-                </el-radio-button>
-                <el-radio-button value="right">
-                  右
-                </el-radio-button>
-              </el-radio-group>
-            </el-form-item>
-
             <el-form-item label="字体">
               <el-select
                 :model-value="subtitleClip.Font || 'Arial'"
