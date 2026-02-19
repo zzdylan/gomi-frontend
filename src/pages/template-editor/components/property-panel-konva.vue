@@ -46,6 +46,60 @@ function updateSubtitleProp<K extends keyof SubtitleTrackClip>(key: K, value: Su
   emit("updateSubtitle", { [key]: value })
 }
 
+// 文字测量 canvas（复用）
+const _measureCanvas = document.createElement("canvas")
+
+// 测量当前字幕文字渲染宽度
+function measureTextWidth(clip: SubtitleTrackClip): number {
+  const ctx = _measureCanvas.getContext("2d")!
+  const italic = clip.FontFace?.Italic ? "italic" : "normal"
+  const bold = clip.FontFace?.Bold ? "bold" : "normal"
+  ctx.font = `${italic} ${bold} ${clip.FontSize ?? 24}px ${clip.Font || "Arial"}`
+  return ctx.measureText(clip.Content).width
+}
+
+// 切换对齐方式时，重新计算 X 使文字保持在原来的视觉位置
+function handleAlignmentChange(newAlignment: string) {
+  const clip = subtitleClip.value
+  if (!clip) return
+
+  const oldAlignment = clip.Alignment || "Center"
+  if (newAlignment === oldAlignment) return
+
+  const width = measureTextWidth(clip) + 40 // TEXT_PADDING = 40
+  const oldX = clip.X ?? 0
+
+  // 从 oldAlignment + oldX 算出容器左边缘
+  let containerLeft: number
+  switch (oldAlignment) {
+    case "Left":
+      containerLeft = oldX
+      break
+    case "Right":
+      containerLeft = oldX - width
+      break
+    default: // Center
+      containerLeft = oldX - width / 2
+      break
+  }
+
+  // 从容器左边缘 + newAlignment 反算新的 X
+  let newX: number
+  switch (newAlignment) {
+    case "Left":
+      newX = containerLeft
+      break
+    case "Right":
+      newX = containerLeft + width
+      break
+    default: // Center
+      newX = containerLeft + width / 2
+      break
+  }
+
+  emit("updateSubtitle", { Alignment: newAlignment, X: Math.round(newX) })
+}
+
 // 处理透明度变化（视频/图片）
 function handleVideoOpacityChange(value: number | number[]) {
   const opacity = Array.isArray(value) ? value[0] : value
@@ -389,6 +443,23 @@ function updateCustomText(index: number, value: string) {
           </div>
 
           <el-form label-width="60px" size="small">
+            <el-form-item label="对齐">
+              <el-radio-group
+                :model-value="subtitleClip.Alignment || 'Center'"
+                @update:model-value="handleAlignmentChange($event as string)"
+              >
+                <el-radio-button value="Left">
+                  左
+                </el-radio-button>
+                <el-radio-button value="Center">
+                  中
+                </el-radio-button>
+                <el-radio-button value="Right">
+                  右
+                </el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+
             <el-form-item label="X 坐标">
               <el-input-number
                 :model-value="subtitleClip.X ?? 0"

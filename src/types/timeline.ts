@@ -293,13 +293,13 @@ export function createSubtitleClip(content: string = "双击编辑文本"): Subt
     Id: generateClipId("text"),
     Type: "Text",
     Content: content,
-    X: 150,
+    X: 180,
     Y: 150,
     Font: "Arial",
     FontSize: 24,
     FontColor: "#1f2937",
     FontColorOpacity: 1,
-    Alignment: "TopLeft"
+    Alignment: "Center"
   }
 }
 

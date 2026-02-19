@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CSSProperties } from "vue"
 import type { SubtitleTrackClip, VideoTrackClip, VisualClip } from "@/types/timeline"
 
 const props = defineProps<{
@@ -106,13 +107,65 @@ function getImageConfig(clip: VideoTrackClip) {
   }
 }
 
+// 文字容器两侧 padding
+const TEXT_PADDING = 40
+
+// 测量文字渲染宽度
+const _measureCanvas = document.createElement("canvas")
+function measureTextWidth(clip: SubtitleTrackClip): number {
+  const ctx = _measureCanvas.getContext("2d")!
+  const italic = clip.FontFace?.Italic ? "italic" : "normal"
+  const bold = clip.FontFace?.Bold ? "bold" : "normal"
+  ctx.font = `${italic} ${bold} ${clip.FontSize ?? 24}px ${clip.Font || "Arial"}`
+  return ctx.measureText(clip.Content).width
+}
+
+// 计算文字容器宽度（文字宽 + padding）
+function getTextContainerWidth(clip: SubtitleTrackClip): number {
+  return measureTextWidth(clip) + TEXT_PADDING
+}
+
+// clip.X 的默认值（未设置时的对齐默认位置）
+function getDefaultX(alignment: string): number {
+  switch (alignment) {
+    case "Left": return 0
+    case "Right": return props.stageSize.width
+    default: return props.stageSize.width / 2 // Center
+  }
+}
+
+// 根据对齐方式和容器宽度，从 clipX 算出容器左边缘 x
+function clipXToContainerX(clipX: number, alignment: string, width: number): number {
+  switch (alignment) {
+    case "Left": return clipX
+    case "Right": return clipX - width
+    default: return clipX - width / 2 // Center
+  }
+}
+
+// 从容器左边缘 x 反算 clipX（锚点位置）
+function containerXToClipX(containerX: number, alignment: string, width: number): number {
+  switch (alignment) {
+    case "Left": return containerX
+    case "Right": return containerX + width
+    default: return containerX + width / 2 // Center
+  }
+}
+
 // 获取文本元素的 config
 function getTextConfig(clip: SubtitleTrackClip) {
+  const alignment = clip.Alignment || "Center"
+  const clipX = clip.X ?? getDefaultX(alignment)
+  const width = getTextContainerWidth(clip)
+  const containerX = clipXToContainerX(clipX, alignment, width)
+
   return {
     id: clip.Id,
     name: clip.Id,
-    x: clip.X ?? 0,
+    x: containerX,
     y: clip.Y ?? 0,
+    width,
+    align: alignment.toLowerCase(),
     text: clip.Content,
     fontSize: clip.FontSize ?? 24,
     fontFamily: clip.Font || "Arial",
@@ -198,15 +251,20 @@ function handleStageMouseDown(e: any) {
 
 // 处理拖拽结束
 function handleDragEnd(clip: VisualClip, e: any) {
-  const updates = {
-    X: e.target.x(),
-    Y: e.target.y()
-  }
-
   if (isVideoClip(clip)) {
-    emit("updateVideo", clip.Id!, updates)
+    emit("updateVideo", clip.Id!, {
+      X: e.target.x(),
+      Y: e.target.y()
+    })
   } else if (isSubtitleClip(clip)) {
-    emit("updateSubtitle", clip.Id!, updates)
+    const sub = clip as SubtitleTrackClip
+    const alignment = sub.Alignment || "Center"
+    const width = e.target.width()
+    const clipX = containerXToClipX(e.target.x(), alignment, width)
+    emit("updateSubtitle", clip.Id!, {
+      X: clipX,
+      Y: e.target.y()
+    })
   }
 }
 
@@ -219,8 +277,11 @@ function handleTransformEnd(clip: VisualClip, e: any) {
   if (isSubtitleClip(clip)) {
     // 对于文本，拖角改字号（取 scaleX/scaleY 较大值，保持等比）
     const scale = Math.max(scaleX, scaleY)
+    const alignment = (clip as SubtitleTrackClip).Alignment || "Center"
+    const width = node.width()
+    const clipX = containerXToClipX(node.x(), alignment, width)
     const updates: Partial<SubtitleTrackClip> = {
-      X: node.x(),
+      X: clipX,
       Y: node.y(),
       Angle: node.rotation(),
       FontSize: Math.round(Math.max(12, (clip.FontSize || 24) * scale))
@@ -343,9 +404,15 @@ async function exportToDataURL(): Promise<string | null> {
     // 重新绘制所有元素
     props.visualClips.forEach((clip) => {
       if (isSubtitleClip(clip)) {
+        const alignment = clip.Alignment || "Center"
+        const clipX = clip.X ?? getDefaultX(alignment)
+        const width = getTextContainerWidth(clip)
+        const containerX = clipXToContainerX(clipX, alignment, width)
         const text = new Konva.Text({
-          x: clip.X ?? 0,
+          x: containerX,
           y: clip.Y ?? 0,
+          width,
+          align: alignment.toLowerCase(),
           text: clip.Content,
           fontSize: clip.FontSize ?? 24,
           fontFamily: clip.Font || "Arial",
@@ -450,14 +517,15 @@ defineExpose({
       v-if="editingTextClip"
       ref="textEditorRef"
       :value="editingTextClip.Content"
-      :style="{
+      :style="({
         position: 'absolute',
-        left: `${editingTextClip.X ?? 0}px`,
+        left: `${clipXToContainerX(editingTextClip.X ?? getDefaultX(editingTextClip.Alignment || 'Center'), editingTextClip.Alignment || 'Center', getTextContainerWidth(editingTextClip))}px`,
         top: `${editingTextClip.Y ?? 0}px`,
-        width: `${editingTextWidth}px`,
+        width: `${getTextContainerWidth(editingTextClip)}px`,
         fontSize: `${editingTextClip.FontSize ?? 24}px`,
         fontFamily: editingTextClip.Font || 'Arial',
         color: editingTextClip.FontColor ?? '#000',
+        textAlign: editingTextClip.Alignment?.toLowerCase() || 'center',
         padding: '0',
         margin: '0',
         border: '1px solid #1890ff',
@@ -466,7 +534,7 @@ defineExpose({
         resize: 'none',
         overflow: 'hidden',
         lineHeight: '1.2',
-      }"
+      } as CSSProperties)"
       @blur="finishTextEdit"
       @keydown.enter.exact="finishTextEdit"
       @keydown.esc="finishTextEdit"
