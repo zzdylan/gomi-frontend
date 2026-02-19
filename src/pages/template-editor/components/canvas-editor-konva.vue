@@ -23,9 +23,14 @@ const editingTextWidth = ref<number>(200)
 // 图片缓存：存储已加载的图片对象
 const imageCache = ref<Map<string, HTMLImageElement>>(new Map())
 
-// 判断是否是视频/图片素材
+// 判断是否是视频占位（Type=Video 且无 MediaURL）
+function isVideoPlaceholder(clip: VisualClip): boolean {
+  return clip.Type === "Video" && !(clip as VideoTrackClip).MediaURL
+}
+
+// 判断是否是视频/图片素材（排除视频占位）
 function isVideoClip(clip: VisualClip): clip is VideoTrackClip {
-  return clip.Type === "Video" || clip.Type === "Image"
+  return (clip.Type === "Video" || clip.Type === "Image") && !isVideoPlaceholder(clip)
 }
 
 // 判断是否是字幕素材
@@ -104,6 +109,17 @@ function getImageConfig(clip: VideoTrackClip) {
     opacity: clip.Opacity ?? 1,
     draggable: true,
     image: img
+  }
+}
+
+// 获取视频占位的 config
+function getPlaceholderConfig(clip: VideoTrackClip) {
+  return {
+    id: clip.Id,
+    name: clip.Id,
+    x: clip.X ?? 0,
+    y: clip.Y ?? 0,
+    draggable: true
   }
 }
 
@@ -251,7 +267,7 @@ function handleStageMouseDown(e: any) {
 
 // 处理拖拽结束
 function handleDragEnd(clip: VisualClip, e: any) {
-  if (isVideoClip(clip)) {
+  if (isVideoPlaceholder(clip) || isVideoClip(clip)) {
     emit("updateVideo", clip.Id!, {
       X: e.target.x(),
       Y: e.target.y()
@@ -289,13 +305,14 @@ function handleTransformEnd(clip: VisualClip, e: any) {
     node.scaleX(1)
     node.scaleY(1)
     emit("updateSubtitle", clip.Id!, updates)
-  } else if (isVideoClip(clip)) {
-    // 对于图片/视频，更新尺寸
+  } else if (isVideoPlaceholder(clip) || isVideoClip(clip)) {
+    // 对于图片/视频/视频占位，更新尺寸
+    const vc = clip as VideoTrackClip
     const updates: Partial<VideoTrackClip> = {
       X: node.x(),
       Y: node.y(),
-      Width: (clip.Width || 100) * scaleX,
-      Height: (clip.Height || 100) * scaleY
+      Width: (vc.Width || 100) * scaleX,
+      Height: (vc.Height || 100) * scaleY
     }
     node.scaleX(1)
     node.scaleY(1)
@@ -403,7 +420,32 @@ async function exportToDataURL(): Promise<string | null> {
 
     // 重新绘制所有元素
     props.visualClips.forEach((clip) => {
-      if (isSubtitleClip(clip)) {
+      if (isVideoPlaceholder(clip)) {
+        const vc = clip as VideoTrackClip
+        const rect = new Konva.Rect({
+          x: vc.X ?? 0,
+          y: vc.Y ?? 0,
+          width: vc.Width ?? 100,
+          height: vc.Height ?? 100,
+          fill: "#e8ecf4",
+          stroke: "#6366f1",
+          strokeWidth: 2,
+          dash: [8, 4]
+        })
+        tempLayer.add(rect)
+        const label = new Konva.Text({
+          x: vc.X ?? 0,
+          y: vc.Y ?? 0,
+          width: vc.Width ?? 100,
+          height: vc.Height ?? 100,
+          text: "视频区域",
+          align: "center",
+          verticalAlign: "middle",
+          fontSize: 16,
+          fill: "#6366f1"
+        })
+        tempLayer.add(label)
+      } else if (isSubtitleClip(clip)) {
         const alignment = clip.Alignment || "Center"
         const clipX = clip.X ?? getDefaultX(alignment)
         const width = getTextContainerWidth(clip)
@@ -477,9 +519,40 @@ defineExpose({
 
         <!-- 渲染所有可视素材 -->
         <template v-for="clip in visualClips" :key="`clip-${clip.Id}`">
+          <!-- 视频占位 -->
+          <v-group
+            v-if="isVideoPlaceholder(clip)"
+            :config="getPlaceholderConfig(clip as VideoTrackClip)"
+            @dragend="handleDragEnd(clip, $event)"
+            @transformend="handleTransformEnd(clip, $event)"
+          >
+            <v-rect
+              :config="{
+                width: (clip as VideoTrackClip).Width ?? 100,
+                height: (clip as VideoTrackClip).Height ?? 100,
+                fill: '#e8ecf4',
+                stroke: '#6366f1',
+                strokeWidth: 2,
+                dash: [8, 4],
+              }"
+            />
+            <v-text
+              :config="{
+                text: '视频区域',
+                width: (clip as VideoTrackClip).Width ?? 100,
+                height: (clip as VideoTrackClip).Height ?? 100,
+                align: 'center',
+                verticalAlign: 'middle',
+                fontSize: 16,
+                fill: '#6366f1',
+                listening: false,
+              }"
+            />
+          </v-group>
+
           <!-- 字幕（文本） -->
           <v-text
-            v-if="isSubtitleClip(clip)"
+            v-else-if="isSubtitleClip(clip)"
             :key="`text-${clip.Id}-${clip.Font}`"
             :config="getTextConfig(clip)"
             @dragend="handleDragEnd(clip, $event)"

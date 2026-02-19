@@ -54,6 +54,9 @@ export interface VideoTrackClip {
   Height?: number // 高度
   Opacity?: number // 不透明度，0=全透明，1=不透明
 
+  // 适配模式: Contain(等比缩放留黑边) | Cover(等比缩放裁剪) | Fill(拉伸填充，默认)
+  AdaptMode?: string
+
   // 特效
   Effects?: Effect[]
 }

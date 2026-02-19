@@ -51,6 +51,10 @@ function handleSubtitleDragEnd() {
 
 // 获取视频/图片素材显示名称
 function getVideoClipDisplayName(clip: VideoTrackClip) {
+  // 视频占位
+  if (clip.Type === "Video" && !clip.MediaURL) {
+    return "视频占位"
+  }
   if (clip.Type === "Image") {
     const fileName = clip.MediaURL.split("/").pop() || "图片"
     return fileName.length > 20 ? `${fileName.substring(0, 20)}...` : fileName

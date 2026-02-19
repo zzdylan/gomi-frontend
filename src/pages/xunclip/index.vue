@@ -142,18 +142,27 @@ async function handleSave() {
   }
 }
 
-// 提交任务
+// 提交任务（自动保存当前配置）
 async function handleSubmitTask(resultLimit: number) {
-  if (!projectId.value) {
-    ElMessage.warning("请先保存工程")
+  const result = validate()
+  if (!result.valid) {
+    ElMessage.warning(result.message)
     return
   }
 
   try {
-    await createXunTaskApi({
-      project_id: projectId.value,
-      result_limit: resultLimit
+    const configJson = JSON.stringify(buildConfig())
+    const { data } = await createXunTaskApi({
+      project_id: projectId.value || undefined,
+      result_limit: resultLimit,
+      title: projectTitle.value,
+      content: configJson,
+      aspect: aspect.value
     })
+    // 首次提交时回填工程ID
+    if (!projectId.value && data.project_id) {
+      projectId.value = data.project_id
+    }
     ElMessage.success("任务已提交")
   } catch {
     ElMessage.error("提交任务失败")
@@ -364,7 +373,6 @@ function goBack() {
     <!-- 提交任务弹窗 -->
     <SubmitDialog
       v-model:visible="submitDialogVisible"
-      :project-id="projectId"
       @submitted="handleSubmitTask"
     />
   </div>

@@ -37,6 +37,8 @@ const {
   visualClips,
   activeClip,
   activeClipType,
+  videoPlaceholderAspect,
+  setVideoPlaceholderAspect,
   addText,
   addImage,
   deleteClip,
@@ -394,8 +396,10 @@ onMounted(() => {
           <el-tab-pane label="素材库" name="materials">
             <ElementToolbar
               :has-selection="!!selectedId"
+              :video-placeholder-aspect="videoPlaceholderAspect"
               @add-text="addText"
               @add-image="addImage"
+              @set-video-placeholder-aspect="setVideoPlaceholderAspect"
               @delete-selected="deleteSelected"
               @clear-canvas="handleClearCanvas"
               @export-j-s-o-n="handleExportJSON"

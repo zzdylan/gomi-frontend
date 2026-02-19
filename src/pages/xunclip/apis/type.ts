@@ -106,10 +106,13 @@ export interface SaveXunProjectRequestData {
   aspect: AspectRatio
 }
 
-/** 创建讯剪任务请求 */
+/** 创建讯剪任务请求（同时携带工程配置，后端自动保存） */
 export interface CreateXunTaskRequestData {
-  project_id: number
+  project_id?: number
   result_limit: number
+  title: string
+  content: string
+  aspect: string
 }
 
 /** 创建工程响应 */
@@ -154,4 +157,5 @@ export type BatchDeleteXunProjectResponseData = ApiResponseData<{
 export type CreateXunTaskResponseData = ApiResponseData<{
   task_id: number
   result_limit: number
+  project_id: number
 }>

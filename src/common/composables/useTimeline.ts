@@ -14,6 +14,7 @@ import {
   createAudioClip,
   createSubtitleClip,
   createVideoClip,
+  generateClipId,
   getTotalDuration,
   removeInternalIds
 } from "@/types/timeline"
@@ -27,17 +28,22 @@ export function useTimeline() {
   // 状态
   // ========================================
 
+  // 创建默认初始内容（含竖屏视频占位）
+  function createInitialContent(): TemplateContent {
+    return {
+      FECanvas: {
+        Width: DEFAULT_CANVAS_WIDTH,
+        Height: DEFAULT_CANVAS_HEIGHT
+      },
+      AspectRatio: "9:16",
+      VideoTracks: [{ VideoTrackClips: [createPlaceholderClip(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, "9:16")] }],
+      SubtitleTracks: [{ SubtitleTrackClips: [] }],
+      AudioTracks: [{ AudioTrackClips: [] }]
+    }
+  }
+
   // 模板内容（阿里云结构）
-  const content = ref<TemplateContent>({
-    FECanvas: {
-      Width: DEFAULT_CANVAS_WIDTH,
-      Height: DEFAULT_CANVAS_HEIGHT
-    },
-    AspectRatio: "9:16",
-    VideoTracks: [{ VideoTrackClips: [] }],
-    SubtitleTracks: [{ SubtitleTrackClips: [] }],
-    AudioTracks: [{ AudioTrackClips: [] }]
-  })
+  const content = ref<TemplateContent>(createInitialContent())
 
   // 模板自定义数据（动态元素配置）
   const customData = ref<TemplateCustomData>({
@@ -122,6 +128,56 @@ export function useTimeline() {
   // ========================================
   // 添加素材
   // ========================================
+
+  // 创建视频占位 clip
+  function createPlaceholderClip(canvasWidth: number, canvasHeight: number, aspect: "9:16" | "16:9"): VideoTrackClip {
+    const x = 0
+    let y = 0
+    let w = canvasWidth
+    let h = canvasHeight
+    if (aspect === "16:9") {
+      w = canvasWidth
+      h = Math.round(canvasWidth * 9 / 16)
+      y = Math.round((canvasHeight - h) / 2)
+    }
+    return {
+      Id: generateClipId("video"),
+      Type: "Video",
+      MediaURL: "",
+      X: x,
+      Y: y,
+      Width: w,
+      Height: h,
+      Opacity: 1
+    }
+  }
+
+  // 当前视频占位的画面比例（根据占位尺寸自动判断）
+  const videoPlaceholderAspect = computed<"9:16" | "16:9">(() => {
+    const placeholder = videoClips.value.find(c => c.Type === "Video" && !c.MediaURL)
+    if (!placeholder || !placeholder.Width || !placeholder.Height) return "9:16"
+    return placeholder.Width / placeholder.Height > 1 ? "16:9" : "9:16"
+  })
+
+  // 切换视频占位的画面比例（删除旧占位 → 添加新占位）
+  const setVideoPlaceholderAspect = (aspect: "9:16" | "16:9") => {
+    const canvasWidth = content.value.FECanvas?.Width ?? DEFAULT_CANVAS_WIDTH
+    const canvasHeight = content.value.FECanvas?.Height ?? DEFAULT_CANVAS_HEIGHT
+
+    // 删除已有占位
+    content.value.VideoTracks?.forEach((track) => {
+      const idx = track.VideoTrackClips.findIndex(c => c.Type === "Video" && !c.MediaURL)
+      if (idx > -1) track.VideoTrackClips.splice(idx, 1)
+    })
+
+    // 添加新占位
+    const clip = createPlaceholderClip(canvasWidth, canvasHeight, aspect)
+    if (!content.value.VideoTracks || content.value.VideoTracks.length === 0) {
+      content.value.VideoTracks = [{ VideoTrackClips: [] }]
+    }
+    content.value.VideoTracks[0].VideoTrackClips.push(clip)
+    selectedId.value = clip.Id!
+  }
 
   // 添加图片
   const addImage = (url: string, mediaId?: string) => {
@@ -305,13 +361,62 @@ export function useTimeline() {
   }
 
   // 导出完整JSON（包含内部ID，用于前端保存）
+  // 坐标从像素转为百分比（ICE 规则：0~0.9999 = 百分比，>=2 = 绝对像素）
   const exportJSON = (): TemplateContent => {
-    return content.value
+    const canvasWidth = content.value.FECanvas?.Width ?? DEFAULT_CANVAS_WIDTH
+    const canvasHeight = content.value.FECanvas?.Height ?? DEFAULT_CANVAS_HEIGHT
+
+    const exported = JSON.parse(JSON.stringify(content.value)) as TemplateContent
+
+    // 视频/图片轨：X, Width 除以画布宽；Y, Height 除以画布高
+    exported.VideoTracks?.forEach((track) => {
+      track.VideoTrackClips.forEach((clip) => {
+        if (clip.X !== undefined) clip.X = clip.X / canvasWidth
+        if (clip.Y !== undefined) clip.Y = clip.Y / canvasHeight
+        if (clip.Width !== undefined) clip.Width = clip.Width / canvasWidth
+        if (clip.Height !== undefined) clip.Height = clip.Height / canvasHeight
+      })
+    })
+
+    // 字幕轨：X 除以画布宽；Y 除以画布高
+    exported.SubtitleTracks?.forEach((track) => {
+      track.SubtitleTrackClips.forEach((clip) => {
+        if (clip.X !== undefined) clip.X = clip.X / canvasWidth
+        if (clip.Y !== undefined) clip.Y = clip.Y / canvasHeight
+        if (!["Left", "Center", "Right"].includes(clip.Alignment ?? "")) {
+          clip.Alignment = "Center"
+        }
+      })
+    })
+
+    return exported
   }
 
   // 从JSON加载
+  // 坐标从百分比转回像素（编辑器使用像素）
   const loadFromJSON = (json: TemplateContent) => {
     if (json) {
+      const canvasWidth = json.FECanvas?.Width ?? DEFAULT_CANVAS_WIDTH
+      const canvasHeight = json.FECanvas?.Height ?? DEFAULT_CANVAS_HEIGHT
+
+      // 视频/图片轨
+      json.VideoTracks?.forEach((track) => {
+        track.VideoTrackClips.forEach((clip) => {
+          if (clip.X !== undefined) clip.X = Math.round(clip.X * canvasWidth)
+          if (clip.Y !== undefined) clip.Y = Math.round(clip.Y * canvasHeight)
+          if (clip.Width !== undefined) clip.Width = Math.round(clip.Width * canvasWidth)
+          if (clip.Height !== undefined) clip.Height = Math.round(clip.Height * canvasHeight)
+        })
+      })
+
+      // 字幕轨
+      json.SubtitleTracks?.forEach((track) => {
+        track.SubtitleTrackClips.forEach((clip) => {
+          if (clip.X !== undefined) clip.X = Math.round(clip.X * canvasWidth)
+          if (clip.Y !== undefined) clip.Y = Math.round(clip.Y * canvasHeight)
+        })
+      })
+
       content.value = json
     }
     selectedId.value = null
@@ -322,16 +427,7 @@ export function useTimeline() {
   // ========================================
 
   const clearCanvas = () => {
-    content.value = {
-      FECanvas: {
-        Width: DEFAULT_CANVAS_WIDTH,
-        Height: DEFAULT_CANVAS_HEIGHT
-      },
-      AspectRatio: "9:16",
-      VideoTracks: [{ VideoTrackClips: [] }],
-      SubtitleTracks: [{ SubtitleTrackClips: [] }],
-      AudioTracks: [{ AudioTrackClips: [] }]
-    }
+    content.value = createInitialContent()
     customData.value = { dynamic_texts: [] }
     selectedId.value = null
   }
@@ -419,6 +515,8 @@ export function useTimeline() {
     totalDuration,
 
     // 添加素材
+    videoPlaceholderAspect,
+    setVideoPlaceholderAspect,
     addImage,
     addVideo,
     addText,

@@ -5,11 +5,13 @@ import MaterialSelector from "@/common/components/MaterialSelector/index.vue"
 
 defineProps<{
   hasSelection: boolean
+  videoPlaceholderAspect: "9:16" | "16:9"
 }>()
 
 const emit = defineEmits<{
   addText: []
   addImage: [url: string, mediaId?: string]
+  setVideoPlaceholderAspect: [aspect: "9:16" | "16:9"]
   deleteSelected: []
   clearCanvas: []
   exportJSON: []
@@ -45,6 +47,25 @@ function handleMaterialSelect(material: MaterialItem) {
         <el-icon><FolderOpened /></el-icon>
         素材库
       </el-button>
+    </div>
+
+    <el-divider />
+
+    <div class="toolbar-title">
+      视频占位
+    </div>
+    <div class="toolbar-buttons">
+      <el-radio-group
+        :model-value="videoPlaceholderAspect"
+        @update:model-value="$emit('setVideoPlaceholderAspect', $event as '9:16' | '16:9')"
+      >
+        <el-radio-button value="9:16">
+          竖屏
+        </el-radio-button>
+        <el-radio-button value="16:9">
+          横屏
+        </el-radio-button>
+      </el-radio-group>
     </div>
 
     <el-divider />

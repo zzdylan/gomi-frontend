@@ -1,10 +1,4 @@
 <script setup lang="ts">
-interface Props {
-  projectId: number | null
-}
-
-defineProps<Props>()
-
 const emit = defineEmits<{
   submitted: [resultLimit: number]
 }>()
@@ -50,14 +44,10 @@ function handleSubmit() {
       <el-button @click="visible = false">
         取消
       </el-button>
-      <el-button type="primary" :disabled="!projectId" @click="handleSubmit">
+      <el-button type="primary" @click="handleSubmit">
         提交任务
       </el-button>
     </template>
-
-    <div v-if="!projectId" class="save-tip">
-      <el-alert title="请先保存工程后再提交任务" type="warning" :closable="false" show-icon />
-    </div>
   </el-dialog>
 </template>
 
@@ -66,9 +56,5 @@ function handleSubmit() {
   font-size: 12px;
   color: #909399;
   margin-top: 4px;
-}
-
-.save-tip {
-  margin-top: 12px;
 }
 </style>

@@ -4,14 +4,29 @@
 
 前端编辑器画布尺寸为 360x640（FECanvas），阿里云 ICE 视频输出为 1080x1920（9:16）。ICE 字幕的 X、Y 接受 0~0.9999 的百分比值，Alignment 字段决定 X 坐标的锚点含义。
 
-## 三方坐标系对照
+## 坐标系对照
 
 | 层级 | X 含义 | 坐标范围 | Alignment |
 |------|--------|---------|-----------|
-| 前端 Konva | 容器左边缘像素 | 0 ~ 360 | 通过 align 属性视觉对齐 |
-| 前端存储（clip.X） | 锚点像素位置 | 0 ~ 360 | Left / Center / Right |
-| 后端归一化后 | 锚点百分比 | 0 ~ 1 | Left / Center / Right |
-| ICE 最终渲染 | 锚点百分比 | 0 ~ 1 | Left / Center / Right |
+| 编辑器内部（Konva） | 容器左边缘像素 | 0 ~ 360 | 通过 align 属性视觉对齐 |
+| 编辑器内部（clip.X） | 锚点像素位置 | 0 ~ 360 | Left / Center / Right |
+| 数据库 / ICE | 锚点百分比 | 0 ~ 1 | Left / Center / Right |
+
+## 数据流
+
+```
+编辑器操作（像素）
+    ↓ exportJSON: X / canvasWidth, Y / canvasHeight
+数据库存储（百分比）
+    ↓ 后端直接使用，不再转换
+ICE 渲染（百分比）
+
+数据库存储（百分比）
+    ↓ loadFromJSON: X * canvasWidth, Y * canvasHeight
+编辑器显示（像素）
+```
+
+转换在 `useTimeline.ts` 的 `exportJSON`（保存时像素→百分比）和 `loadFromJSON`（加载时百分比→像素）中完成。后端直接使用数据库中的百分比值，只做 Alignment 校验（`validateSubtitleAlignment`）。
 
 ## ICE Alignment 含义
 
@@ -27,7 +42,7 @@ Y 始终指向文字**顶部边缘**。
 
 ### clip.X 与 Konva container.x 的关系
 
-Konva 的 `x` 属性始终是容器**左边缘**位置。但 clip.X 存储的是**锚点位置**，二者需要根据 Alignment 和容器宽度互转：
+Konva 的 `x` 属性始终是容器**左边缘**位置。但 clip.X 存储的是**锚点位置**（编辑器内为像素），二者需要根据 Alignment 和容器宽度互转：
 
 ```
 clipX → containerX（渲染时）:
@@ -67,30 +82,16 @@ createSubtitleClip() → { X: 180, Y: 150, Alignment: "Center" }
 
 X=180 是 360px 画布的正中间，配合 Center 对齐，文字居中显示。
 
-## 后端归一化
+## 保存后的数据示例
 
-文件：`app/logic/xunclip/template_loader.go` 的 `normalizeSubtitlePosition`
+画布 360x640：
 
-```
-X(百分比) = X(像素) / FECanvas.Width
-Y(百分比) = Y(像素) / FECanvas.Height
-Alignment 直接透传
-```
-
-示例（画布 360x640）：
-
-| 前端值 | 归一化后 | ICE 渲染效果 |
-|-------|---------|-------------|
+| 编辑器值（像素） | 数据库/ICE 值（百分比） | ICE 渲染效果 |
+|----------------|----------------------|-------------|
 | X:180, Alignment:Center | X:0.5, Center | 文字中心在屏幕50% |
 | X:0, Alignment:Left | X:0, Left | 文字左边缘贴左 |
 | X:360, Alignment:Right | X:1.0, Right | 文字右边缘贴右 |
 | X:100, Alignment:Center | X:0.278, Center | 文字中心在屏幕27.8% |
-
-### 三个调用入口
-
-1. **`extractStyleFromTimeline`** - 提取字幕/动态文案样式时归一化
-2. **`BuildStaticTextTracks`** - 输出固定文字时归一化
-3. 两处都调用同一个 `normalizeSubtitlePosition`
 
 ## FontSize 处理
 
@@ -101,15 +102,16 @@ FECanvas: 360x640, FontSize: 24
 ICE 输出 1080x1920 时自动缩放: 24 * (1080/360) = 72
 ```
 
-前端 timeline_build.go 会将模板的 FECanvas 透传到输出 Timeline，ICE 据此计算缩放比。
+前端 `timeline_build.go` 会将模板的 FECanvas 透传到输出 Timeline，ICE 据此计算缩放比。
 
 ## 涉及文件
 
 | 文件 | 职责 |
 |------|------|
+| `composables/useTimeline.ts` | 保存时像素→百分比，加载时百分比→像素 |
 | `types/timeline.ts` | SubtitleTrackClip 类型定义，createSubtitleClip 默认值 |
-| `components/canvas-editor-konva.vue` | Konva 渲染、拖拽、变换、导出时的坐标转换 |
+| `components/canvas-editor-konva.vue` | Konva 渲染、拖拽、变换时的 clipX ↔ containerX 转换 |
 | `components/property-panel-konva.vue` | 对齐切换时重算 X，属性面板输入 |
-| `app/logic/xunclip/template_loader.go` | 后端像素→百分比归一化 |
+| `app/logic/xunclip/template_loader.go` | 后端 Alignment 校验（`validateSubtitleAlignment`） |
 | `pkg/timeline/timeline.go` | SubtitleTrackClip 结构体（含 Alignment 字段） |
 | `pkg/timeline/builder.go` | AddSubtitleClipWithStyle 完整拷贝样式字段 |

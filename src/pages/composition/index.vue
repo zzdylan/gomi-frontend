@@ -511,7 +511,7 @@ onMounted(() => {
     </el-dialog>
 
     <!-- 预览对话框 -->
-    <el-dialog v-model="previewDialogVisible" :title="previewComposition?.name" class="preview-dialog">
+    <el-dialog v-model="previewDialogVisible" :title="previewComposition?.name" class="preview-dialog" destroy-on-close>
       <div v-if="previewComposition" class="preview-content">
         <div class="preview-media">
           <video
@@ -922,18 +922,13 @@ onMounted(() => {
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: auto;
     background: #1a1a2e;
     border-radius: 8px;
     padding: 16px;
-    min-height: 200px;
 
     video {
-      max-width: 80vw;
+      max-width: 100%;
       max-height: 60vh;
-      width: auto;
-      height: auto;
-      object-fit: contain;
       border-radius: 4px;
     }
 
